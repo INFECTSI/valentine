@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: valentine
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0

@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+*.pyo
+cloudflared.exe
+tools
+node_modules
+.git
+.gitignore
+*.zip
+test-results.*
+rea-scenario.json

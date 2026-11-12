@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trouver l'adresse d'une annonce — démo DPE</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --ink: #15202b;
+      --muted: #5b6b7a;
+      --accent: #0b6bcb;
+      --accent2: #074a8c;
+      --line: #dde3ea;
+      --ok: #1a7f37;
+      --warn: #b26a00;
+      --bad: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      background: linear-gradient(135deg, #0b3d6b, #0b6bcb);
+      color: #fff;
+      padding: 28px 20px;
+    }
+    header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    header p { margin: 0; opacity: .92; max-width: 980px; line-height: 1.45; }
+    main { max-width: 1180px; margin: 0 auto; padding: 20px; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--muted);
+      position: relative;
+    }
+    input, select, textarea {
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      min-width: 0;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #b9d7fb;
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    button {
+      font: inherit;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 11px 16px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    button.primary { background: var(--accent); color: #fff; }
+    button.primary:hover { background: var(--accent2); }
+    button.secondary { background: #fff; border-color: var(--line); color: var(--ink); }
+    button.secondary:hover { background: #f0f4f8; }
+    .status { margin: 14px 0 0; font-size: .9rem; color: var(--muted); line-height: 1.45; }
+    .status.error { color: var(--bad); }
+    .status.ok { color: var(--ok); }
+    .autocomplete {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-top: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+    .autocomplete button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 12px;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      font-weight: 500;
+    }
+    .autocomplete button:hover { background: #eef5fd; }
+    .autocomplete .hint { padding: 8px 12px; font-size: .8rem; color: var(--muted); }
+    #resultsSection { margin-top: 20px; }
+    #map {
+      height: 430px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #e9eef3;
+    }
+    #summary {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 14px 0;
+    }
+    #summary .count { font-weight: 800; }
+    #cards { display: grid; gap: 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .card-head {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .card h3 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+    .score {
+      flex: 0 0 auto;
+      min-width: 64px;
+      text-align: center;
+      border-radius: 12px;
+      padding: 8px 10px;
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.1rem;
+    }
+    .score small {
+      display: block;
+      font-size: .62rem;
+      font-weight: 700;
+      opacity: .92;
+      letter-spacing: .02em;
+    }
+    .score.high { background: var(--ok); }
+    .score.mid { background: var(--warn); }
+    .score.low { background: var(--bad); }
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    .pill {
+      background: #eef2f6;
+      border-radius: 999px;
+      padding: 3px 9px;
+      white-space: nowrap;
+    }
+    .reasons { font-size: .82rem; color: var(--muted); }
+    .reasons ul { margin: 4px 0 0; padding-left: 18px; }
+    .links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .links a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: .82rem;
+      border: 1px solid #cfe1f7;
+      background: #f2f8ff;
+      padding: 6px 9px;
+      border-radius: 8px;
+    }
+    .links a:hover { background: #e3f0ff; }
+    .notice {
+      font-size: .8rem;
+      color: var(--muted);
+      background: #fff8e6;
+      border: 1px solid #f1d9a6;
+      padding: 10px 12px;
+      border-radius: 10px;
+      line-height: 1.45;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 640px) {
+      header { padding: 20px 14px; }
+      main { padding: 14px; }
+      #map { height: 330px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Trouver l'adresse d'une annonce</h1>
+  <p>
+    Démo locale : on croise l'annonce avec la base officielle des DPE de l'ADEME
+    (15,9 millions de diagnostics), puis on affiche les adresses candidates et un lien
+    vers Street View. Aucune donnée n'est envoyée à un serveur privé : les requêtes vont
+    directement aux API publiques ADEME, BAN et IGN.
+  </p>
+  <p style="margin-top:10px">
+    <a href="search.html" style="color:#fff;font-weight:700">← Rechercher d'abord des annonces</a>
+  </p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="grid">
+      <label>Ville ou code postal
+        <input id="city" placeholder="Ex. Paris 11e, 75011, Carcassonne" autocomplete="off" />
+        <div id="cityResults" class="autocomplete hidden"></div>
+      </label>
+
+      <label>Type de bien
+        <select id="type">
+          <option value="appartement">Appartement</option>
+          <option value="maison">Maison</option>
+          <option value="immeuble">Immeuble</option>
+        </select>
+      </label>
+
+      <label>Surface (m²)
+        <input id="surface" type="number" min="9" max="500" step="0.5" placeholder="Ex. 45" />
+      </label>
+
+      <label>DPE
+        <select id="dpe">
+          <option value="">—</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option>
+          <option>E</option><option>F</option><option>G</option>
+        </select>
+      </label>
+
+      <label>GES
+        <select id="ges">
+          <option value="">—</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option>
+          <option>E</option><option>F</option><option>G</option>
+        </select>
+      </label>
+
+      <label>Année de construction
+        <input id="year" type="number" min="1800" max="2026" placeholder="Ex. 1975" />
+      </label>
+
+      <label>Étage
+        <input id="floor" type="number" min="0" max="50" placeholder="Ex. 3" />
+      </label>
+
+      <label>Chauffage
+        <select id="heating">
+          <option value="">—</option>
+          <option value="gaz">Gaz</option>
+          <option value="électrique">Électrique</option>
+          <option value="fioul">Fioul</option>
+          <option value="bois">Bois</option>
+          <option value="pompe à chaleur">Pompe à chaleur</option>
+          <option value="collectif">Collectif</option>
+          <option value="individuel">Individuel</option>
+        </select>
+      </label>
+
+      <label>Rue / lieu-dit (si l'annonce le donne)
+        <input id="street" placeholder="Ex. Rue du Cluzel" autocomplete="off" />
+      </label>
+
+      <label>Rayon de secours (m)
+        <input id="radius" type="number" min="50" max="5000" step="50" value="500" />
+      </label>
+
+      <label>Numéro DPE (13 caractères)
+        <input id="dpeNumber" placeholder="Ex. 2611E0031228S" autocomplete="off" />
+      </label>
+    </div>
+
+    <label style="margin-top:12px">Coller le texte de l'annonce (optionnel)
+      <textarea id="adText" rows="4" placeholder="Collez ici le titre + la description + les caractéristiques. La démo extrait le numéro DPE, la surface, la classe énergie, l'étage, l'année, le chauffage, la résidence…"></textarea>
+    </label>
+
+    <div class="actions">
+      <button id="parseBtn" class="secondary" type="button">Analyser l'annonce</button>
+      <button id="searchBtn" class="primary" type="button">Chercher les adresses</button>
+    </div>
+
+    <p id="status" class="status">
+      Astuce : le numéro DPE à 13 caractères est la clé en or. S'il est dans l'annonce,
+      la démo le détecte et va directement à l'adresse.
+    </p>
+  </section>
+
+  <section id="resultsSection" class="hidden">
+    <div id="map"></div>
+    <div id="summary"></div>
+    <div id="cards"></div>
+    <p class="notice" style="margin-top:14px">
+      <strong>À vérifier sur place.</strong> Le DPE donne l'adresse de l'immeuble ou de la parcelle,
+      pas forcément l'appartement exact. Utilise Street View pour comparer la façade, le balcon,
+      les volets, la vue et les commerces. Pour une maison, l'adresse est généralement précise.
+      <br><strong>Si Street View est noir</strong>, c'est que la zone n'a pas de panorama : utilise
+      <em>Satellite</em> ou <em>Google Maps</em>, ou vérifie avec Panoramax.
+    </p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const DPE_API = 'https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines';
+  const BAN_API = 'https://api-adresse.data.gouv.fr/search/';
+  const FIELDS = [
+    'numero_dpe', 'adresse_ban', 'code_insee_ban', 'nom_commune_ban',
+    'surface_habitable_logement', 'surface_habitable_immeuble',
+    'etiquette_dpe', 'etiquette_ges', 'type_batiment',
+    'annee_construction', 'periode_construction',
+    'numero_etage_appartement', 'nombre_appartement',
+    'complement_adresse_batiment', 'complement_adresse_logement',
+    'date_etablissement_dpe', '_geopoint',
+    'type_energie_principale_chauffage', 'methode_application_dpe'
+  ];
+
+  const state = {
+    city: null,
+    map: null,
+    layer: null,
+    candidates: [],
+    lastQuery: ''
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+  const norm = (s) => String(s == null ? '' : s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // Pour la recherche plein texte, on garde le mot le plus distinctif de la rue :
+  // « rue du Cluzel » -> « Cluzel », « place Foire au Roi » -> « Foire », etc.
+  function streetQuery(street, cityLabel) {
+    const stop = new Set([
+      'rue', 'avenue', 'boulevard', 'bd', 'place', 'impasse', 'allée', 'allee',
+      'quai', 'route', 'chemin', 'square', 'villa', 'du', 'de', 'des', 'la',
+      'le', 'les', 'au', 'aux', 'd', 'l', 'sur', 'sous', 'et'
+    ]);
+    String(cityLabel || '').split(/[^\p{L}\p{N}]+/u).forEach((w) => {
+      if (w) stop.add(norm(w));
+    });
+    const words = String(street || '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    const candidates = words.filter((w) => w.length >= 4 && !stop.has(norm(w)));
+    candidates.sort((a, b) => b.length - a.length);
+    return candidates[0] || '';
+  }
+  const debounce = (fn, ms) => {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms || 250);
+    };
+  };
+
+  // ---------------------------------------------------------------------------
+  // Autocomplétion de la commune via la BAN
+  // ---------------------------------------------------------------------------
+  const cityInput = $('city');
+  const cityResults = $('cityResults');
+
+  const searchCities = debounce(async () => {
+    const q = cityInput.value.trim();
+    state.city = null;
+    if (q.length < 2) {
+      cityResults.classList.add('hidden');
+      return;
+    }
+    try {
+      const r = await fetch(`${BAN_API}?q=${encodeURIComponent(q)}&type=municipality&limit=6`);
+      const j = await r.json();
+      const feats = j.features || [];
+      if (!feats.length) {
+        cityResults.innerHTML = '<div class="hint">Aucune commune trouvée.</div>';
+        cityResults.classList.remove('hidden');
+        return;
+      }
+      cityResults.innerHTML = feats.map((f) => {
+        const p = f.properties;
+        return `<button type="button" data-insee="${esc(p.citycode)}" data-label="${esc(p.label)}">
+          ${esc(p.label)} <span style="color:#5b6b7a">(${esc(p.postcode)})</span>
+        </button>`;
+      }).join('');
+      cityResults.classList.remove('hidden');
+      cityResults.querySelectorAll('button').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.city = { insee: b.dataset.insee, label: b.dataset.label };
+          cityInput.value = b.dataset.label;
+          cityResults.classList.add('hidden');
+        });
+      });
+    } catch (e) {
+      cityResults.innerHTML = '<div class="hint">Erreur de géocodage.</div>';
+      cityResults.classList.remove('hidden');
+    }
+  });
+
+  cityInput.addEventListener('input', () => { state.city = null; });
+  cityInput.addEventListener('input', searchCities);
+  cityInput.addEventListener('focus', () => {
+    if (cityInput.value.trim().length >= 2 && !state.city) searchCities();
+  });
+  document.addEventListener('click', (e) => {
+    if (!cityResults.contains(e.target) && e.target !== cityInput) {
+      cityResults.classList.add('hidden');
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Parsing de l'annonce
+  // ---------------------------------------------------------------------------
+  function parseAd() {
+    const text = $('adText').value || '';
+    const out = {};
+
+    const dpeNum = text.match(/\b\d{4}[A-Z]\d{7}[A-Z]\b/);
+    if (dpeNum) out.dpeNumber = dpeNum[0];
+
+    const surfaces = [...text.matchAll(/(\d{1,3}(?:[.,]\d+)?)\s*m(?:²|2)(?=\s|[.,;)]|$)/gi)]
+      .map((m) => parseFloat(m[1].replace(',', '.')))
+      .filter((n) => n >= 9 && n <= 500);
+    if (surfaces.length) out.surface = surfaces[0];
+
+    const dpe = text.match(/(?:DPE|diagnostic de performance énergétique|étiquette(?:\s*énergie)?|classe(?:\s*énergie)?)\s*[:\-–]?\s*([A-G])\b/i)
+      || text.match(/\b([A-G])\s*[\(\-–]?\s*\d{2,3}\s*kWh/i);
+    if (dpe) out.dpe = dpe[1].toUpperCase();
+
+    const ges = text.match(/(?:GES|gaz à effet de serre|étiquette\s*climat|classe\s*climat)\s*[:\-–]?\s*([A-G])\b/i);
+    if (ges) out.ges = ges[1].toUpperCase();
+
+    const cp = text.match(/\b(\d{5})\s+([A-ZÉÈÀÂÎÔÛÇ][a-zà-ÿ'’\-]+)/);
+    if (cp) out.postcode = cp[1];
+    else {
+      const cp2 = text.match(/([A-ZÉÈÀÂÎÔÛÇ][a-zà-ÿ'’\-]+)\s+\b(\d{5})\b/);
+      if (cp2) out.postcode = cp2[2];
+    }
+
+    const floor = text.match(/(\d+)\s*(?:er|e|ème)?\s*étage/i);
+    if (floor) out.floor = parseInt(floor[1], 10);
+    if (/\b(?:RDC|rez-de-chaussée)\b/i.test(text)) out.floor = 0;
+
+    const year = text.match(/(?:construction|construit|bâti|année)\s*(?:en|:)?\s*((?:18|19|20)\d{2})/i);
+    if (year) out.year = parseInt(year[1], 10);
+
+    const heat = text.match(/(?:chauffage|chauffe|énergie|energie)[^a-zà-ÿ]{0,25}(gaz|électrique|fioul|bois|pompe à chaleur)/i)
+      || text.match(/(gaz|électrique|fioul|bois|pompe à chaleur)/i);
+    if (heat) {
+      const h = norm(heat[1]);
+      out.heating = h === 'electrique' ? 'électrique' : heat[1].toLowerCase();
+    }
+
+    const rooms = text.match(/\bT([1-9])\b/i) || text.match(/(\d+)\s*pièces?/i);
+    if (rooms) out.rooms = parseInt(rooms[1], 10);
+
+    const res = text.match(/(?:résidence|residence|programme)\s*[:\-–]?\s*([A-ZÉÈÀÂÎÔÛÇ][\w'’\- ]{2,50})/i);
+    if (res) out.residence = res[1].trim();
+
+    const street = text.match(/((?:rue|avenue|boulevard|bd|place|impasse|allée|allee|quai|route|chemin|square|villa)\s+[A-ZÉÈÀÂÎÔÛÇ][\w'’\-]+(?:\s+[A-ZÉÈÀÂÎÔÛÇ][\w'’\-]+){0,4})/i);
+    if (street) out.street = street[1].trim();
+
+    return out;
+  }
+
+  $('parseBtn').addEventListener('click', async () => {
+    const parsed = parseAd();
+    if (parsed.surface) $('surface').value = parsed.surface;
+    if (parsed.dpe) $('dpe').value = parsed.dpe;
+    if (parsed.ges) $('ges').value = parsed.ges;
+    if (parsed.floor !== undefined) $('floor').value = parsed.floor;
+    if (parsed.year) $('year').value = parsed.year;
+    if (parsed.heating) $('heating').value = parsed.heating;
+    if (parsed.street) $('street').value = parsed.street;
+    if (parsed.dpeNumber) $('dpeNumber').value = parsed.dpeNumber;
+    if (parsed.postcode) {
+      cityInput.value = parsed.postcode;
+      state.city = null;
+      searchCities();
+    }
+
+    const bits = [];
+    if (parsed.dpeNumber) bits.push(`numéro DPE ${parsed.dpeNumber}`);
+    if (parsed.surface) bits.push(`surface ${parsed.surface} m²`);
+    if (parsed.dpe) bits.push(`DPE ${parsed.dpe}`);
+    if (parsed.ges) bits.push(`GES ${parsed.ges}`);
+    if (parsed.floor !== undefined) bits.push(`étage ${parsed.floor}`);
+    if (parsed.year) bits.push(`année ${parsed.year}`);
+    if (parsed.rooms) bits.push(`${parsed.rooms} pièces`);
+    if (parsed.residence) bits.push(`résidence « ${parsed.residence} »`);
+    if (parsed.street) bits.push(`rue « ${parsed.street} »`);
+
+    setStatus(
+      bits.length ? `Extrait : ${bits.join(' · ')}.` : 'Aucun champ reconnu — remplis le formulaire à la main.',
+      bits.length ? 'ok' : 'error'
+    );
+
+    if (parsed.dpeNumber) {
+      setStatus(`Numéro DPE détecté (${parsed.dpeNumber}) : recherche directe…`, 'ok');
+      await searchByDpeNumber(parsed.dpeNumber);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  function setStatus(msg, cls) {
+    const el = $('status');
+    el.textContent = msg;
+    el.className = 'status' + (cls ? ` ${cls}` : '');
+  }
+
+  function yearOf(c) {
+    if (c.annee_construction) return Number(c.annee_construction);
+    const p = String(c.periode_construction || '');
+    const m = p.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    if (m) return Math.round((Number(m[1]) + Number(m[2])) / 2);
+    const one = p.match(/(\d{4})/);
+    return one ? Number(one[1]) : null;
+  }
+
+  function floorOf(c) {
+    const txt = `${c.complement_adresse_logement || ''} ${c.complement_adresse_batiment || ''}`;
+    const m = txt.match(/[EÉ]tage\s*[:\-–]?\s*(\d+)/i);
+    if (m) return Number(m[1]);
+    if (/\bRDC\b|rez-de-chaussée/i.test(txt)) return 0;
+    const n = Number(c.numero_etage_appartement);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function pointOf(c) {
+    const p = String(c._geopoint || '').split(',');
+    if (p.length !== 2) return null;
+    const lat = Number(p[0]);
+    const lon = Number(p[1]);
+    return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
+  }
+
+  function distanceM(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  async function geocodeArea(q, cityLabel) {
+    try {
+      const r = await fetch(`${BAN_API}?q=${encodeURIComponent(`${q}, ${cityLabel}`)}&limit=1`);
+      const j = await r.json();
+      const f = (j.features || [])[0];
+      if (!f) return null;
+      return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function dpeColor(letter) {
+    return {
+      A: '#1a9850', B: '#66bd63', C: '#a6d96a', D: '#fee08b',
+      E: '#fdae61', F: '#f46d43', G: '#d73027'
+    }[letter] || '#8899a6';
+  }
+
+  function scoreCandidate(c, input) {
+    let s = 0;
+    const reasons = [];
+    const surf = Number(c.surface_habitable_logement || c.surface_habitable_immeuble || 0);
+
+    if (input.surface && surf) {
+      const d = Math.abs(surf - input.surface);
+      if (d <= 1) { s += 28; reasons.push('surface quasi identique'); }
+      else if (d <= 3) { s += 20; reasons.push(`surface à ${d.toFixed(1)} m²`); }
+      else if (d <= 5) { s += 12; reasons.push(`surface à ${d.toFixed(1)} m²`); }
+      else if (d <= 8) { s += 5; reasons.push(`surface à ${d.toFixed(1)} m²`); }
+      else { s -= 6; }
+    }
+
+    if (input.dpe && c.etiquette_dpe === input.dpe) { s += 15; reasons.push(`DPE ${input.dpe}`); }
+    if (input.ges && c.etiquette_ges === input.ges) { s += 10; reasons.push(`GES ${input.ges}`); }
+    if (input.type && c.type_batiment === input.type) { s += 10; reasons.push('type de bien'); }
+
+    const cy = yearOf(c);
+    if (input.year && cy) {
+      const d = Math.abs(cy - input.year);
+      if (d <= 2) { s += 12; reasons.push('année de construction'); }
+      else if (d <= 5) { s += 8; reasons.push('année proche'); }
+      else if (d <= 10) { s += 3; }
+      else if (cy < 1948 && input.year < 1948) { s += 8; reasons.push('période ancienne'); }
+    }
+
+    const cf = floorOf(c);
+    if (input.floor !== undefined && input.floor !== '' && cf !== null) {
+      if (cf === Number(input.floor)) { s += 10; reasons.push('étage identique'); }
+      else if (Math.abs(cf - Number(input.floor)) <= 1) { s += 4; reasons.push('étage proche'); }
+    }
+
+    if (input.heating && c.type_energie_principale_chauffage) {
+      if (norm(c.type_energie_principale_chauffage).includes(norm(input.heating))) {
+        s += 6;
+        reasons.push('chauffage');
+      }
+    }
+
+    if (c.date_etablissement_dpe) {
+      const age = (Date.now() - new Date(c.date_etablissement_dpe).getTime()) / 31557600000;
+      if (age <= 2) { s += 5; reasons.push('DPE récent'); }
+      else if (age <= 5) { s += 3; }
+    }
+
+    if (input.residence) {
+      const hay = norm(`${c.complement_adresse_batiment || ''} ${c.complement_adresse_logement || ''} ${c.adresse_ban || ''}`);
+      if (hay.includes(norm(input.residence))) {
+        s += 15;
+        reasons.push('nom de résidence');
+      }
+    }
+
+    return { score: Math.max(0, Math.min(99, Math.round(s))), reasons };
+  }
+
+  function labelFor(score) {
+    if (score >= 80) return 'Très probable';
+    if (score >= 65) return 'Probable';
+    if (score >= 50) return 'Possible';
+    return 'Faible';
+  }
+
+  function scoreClass(score) {
+    return score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low';
+  }
+
+  // ---------------------------------------------------------------------------
+  // API DPE
+  // ---------------------------------------------------------------------------
+  async function fetchDpe(qs, q) {
+    const select = FIELDS.join(',');
+    const qpart = q ? `&q=${encodeURIComponent(q)}` : '';
+    const all = [];
+    let url = `${DPE_API}?size=1000&select=${encodeURIComponent(select)}&qs=${encodeURIComponent(qs)}${qpart}`;
+
+    for (let page = 0; page < 5 && url; page++) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(await r.text());
+      const j = await r.json();
+      all.push(...(j.results || []));
+      if (all.length >= j.total || !j.next) break;
+
+      const next = new URL(j.next);
+      const after = next.searchParams.get('after');
+      url = after
+        ? `${DPE_API}?size=1000&select=${encodeURIComponent(select)}&qs=${encodeURIComponent(qs)}&after=${encodeURIComponent(after)}${qpart}`
+        : null;
+    }
+    return all;
+  }
+
+  async function resolveCity() {
+    if (state.city && cityInput.value.trim() === state.city.label) return state.city;
+    const q = cityInput.value.trim();
+    if (!q) throw new Error('Indique une ville ou un code postal.');
+    const r = await fetch(`${BAN_API}?q=${encodeURIComponent(q)}&type=municipality&limit=1`);
+    const j = await r.json();
+    const f = (j.features || [])[0];
+    if (!f) throw new Error(`Commune introuvable pour « ${q} ».`);
+    state.city = { insee: f.properties.citycode, label: f.properties.label };
+    cityInput.value = f.properties.label;
+    return state.city;
+  }
+
+  function currentInput() {
+    return {
+      surface: Number($('surface').value) || null,
+      dpe: $('dpe').value || null,
+      ges: $('ges').value || null,
+      type: $('type').value,
+      year: Number($('year').value) || null,
+      floor: $('floor').value === '' ? undefined : Number($('floor').value),
+      heating: $('heating').value || null
+    };
+  }
+
+  async function searchByDpeNumber(num) {
+    setStatus(`Recherche du DPE ${num} dans la base ADEME…`);
+    try {
+      const rows = await fetchDpe(`numero_dpe:${num}`);
+      if (!rows.length) {
+        setStatus(`Aucun DPE trouvé pour le numéro ${num}. Vérifie le numéro (13 caractères).`, 'error');
+        return;
+      }
+      const scored = rows.map((c) => ({
+        c,
+        score: 100,
+        reasons: ['numéro DPE exact']
+      }));
+      setStatus(`DPE ${num} trouvé : adresse récupérée dans la base ADEME.`, 'ok');
+      render(scored, { direct: true, total: 1 });
+    } catch (e) {
+      setStatus(`Erreur API DPE : ${e.message}`, 'error');
+    }
+  }
+
+  async function search() {
+    try {
+      const directNumber = $('dpeNumber').value.trim().toUpperCase();
+      if (directNumber) {
+        await searchByDpeNumber(directNumber);
+        return;
+      }
+
+      const ad = parseAd();
+      if (ad.dpeNumber) {
+        $('dpeNumber').value = ad.dpeNumber;
+        await searchByDpeNumber(ad.dpeNumber);
+        return;
+      }
+
+      // Si l'utilisateur a collé l'annonce sans cliquer sur « Analyser »,
+      // on applique quand même les champs extraits (sans écraser ses saisies).
+      if (ad.surface && !$('surface').value) $('surface').value = ad.surface;
+      if (ad.dpe && !$('dpe').value) $('dpe').value = ad.dpe;
+      if (ad.ges && !$('ges').value) $('ges').value = ad.ges;
+      if (ad.floor !== undefined && $('floor').value === '') $('floor').value = ad.floor;
+      if (ad.year && !$('year').value) $('year').value = ad.year;
+      if (ad.heating && !$('heating').value) $('heating').value = ad.heating;
+      if (ad.street && !$('street').value) $('street').value = ad.street;
+
+      const city = await resolveCity();
+      const input = currentInput();
+      if (ad.residence && !input.residence) input.residence = ad.residence;
+      const street = $('street').value.trim();
+      const streetQ = streetQuery(street, city.label);
+
+      if (!input.surface && !input.dpe && !input.ges) {
+        setStatus('Le champ surface est vide (le « 45 » grisé est un exemple). Saisis une surface, ou choisis une classe DPE/GES.', 'error');
+        return;
+      }
+
+      const filters = [`code_insee_ban:${city.insee}`, `type_batiment:${input.type}`];
+      if (input.dpe) filters.push(`etiquette_dpe:${input.dpe}`);
+      if (input.ges) filters.push(`etiquette_ges:${input.ges}`);
+      if (input.surface) {
+        const delta = Math.max(4, Math.round(input.surface * 0.1));
+        const min = Math.max(9, Math.floor(input.surface - delta));
+        const max = Math.ceil(input.surface + delta);
+        filters.push(`surface_habitable_logement:[${min} TO ${max}]`);
+      }
+
+      const qs = filters.join(' AND ');
+      state.lastQuery = qs;
+      setStatus(`Interrogation de la base ADEME (${city.label})${street ? ` — rue « ${street} »` : ''}…`);
+
+      const t0 = performance.now();
+      let rows = await fetchDpe(qs, streetQ || null);
+      let usedStreet = Boolean(street) && rows.length > 0;
+      let streetNote = '';
+      if (!rows.length && street) {
+        rows = await fetchDpe(qs, null);
+        usedStreet = false;
+        if (rows.length) {
+          const radius = Math.min(5000, Math.max(50, Number($('radius').value) || 500));
+          const area = await geocodeArea(street, city.label);
+          if (area) {
+            const filtered = rows.filter((c) => {
+              const pt = pointOf(c);
+              return pt && distanceM(area.lat, area.lon, pt[0], pt[1]) <= radius;
+            });
+            if (filtered.length) {
+              rows = filtered;
+              streetNote = ` Aucun DPE sur « ${street} » : recherche dans un rayon de ${radius} m autour du lieu.`;
+            } else {
+              streetNote = ` Aucun DPE sur « ${street} » ni dans un rayon de ${radius} m : recherche élargie à la commune.`;
+            }
+          } else {
+            streetNote = ` Aucun DPE trouvé sur « ${street} » : recherche élargie à la commune.`;
+          }
+        }
+      }
+      const ms = Math.round(performance.now() - t0);
+
+      if (!rows.length) {
+        setStatus(
+          `Aucun DPE ne correspond à « ${qs} ». Essaie d'élargir la surface, de retirer le GES, ou de passer en type « immeuble ».`,
+          'error'
+        );
+        return;
+      }
+
+      const scored = rows
+        .map((c) => ({ c, ...scoreCandidate(c, input) }))
+        .sort((a, b) => b.score - a.score);
+
+      const note = rows.length >= 5000 ? ' (limité aux 5 000 premiers ; affine les critères)' : '';
+      const streetInfo = usedStreet ? ` Filtre rue : « ${street} » (mot-clé « ${streetQ} »).` : streetNote;
+      setStatus(
+        `${rows.length} DPE candidats en ${ms} ms${note}.${streetInfo} Les adresses sont au niveau de l'immeuble/parcelle, pas toujours de l'appartement exact.`,
+        'ok'
+      );
+      render(scored, { direct: false, total: rows.length });
+    } catch (e) {
+      setStatus(`Erreur : ${e.message}`, 'error');
+      console.error(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendu
+  // ---------------------------------------------------------------------------
+  function render(scored, meta) {
+    state.candidates = scored;
+    $('resultsSection').classList.remove('hidden');
+
+    const top = scored.slice(0, 40);
+    const high = scored.filter((x) => x.score >= 80).length;
+
+    $('summary').innerHTML = `
+      <div class="count">
+        ${meta.direct ? 'DPE retrouvé' : `${scored.length} candidat${scored.length > 1 ? 's' : ''}`}
+        <span style="font-weight:500;color:#5b6b7a">— ${high} très probable${high > 1 ? 's' : ''}</span>
+      </div>
+      <div style="font-size:.8rem;color:#5b6b7a">Triés par score de correspondance. Vérifie toujours sur place.</div>
+    `;
+
+    $('cards').innerHTML = top.map((x) => cardHtml(x, meta)).join('');
+    initMap(top);
+  }
+
+  function cardHtml({ c, score, reasons }, meta) {
+    const pt = pointOf(c);
+    const addr = c.adresse_ban || 'Adresse non renseignée';
+    const surf = c.surface_habitable_logement
+      ? `${Number(c.surface_habitable_logement).toFixed(1)} m²`
+      : (c.surface_habitable_immeuble ? `immeuble ${Number(c.surface_habitable_immeuble).toFixed(0)} m²` : 'surface ?');
+    const year = yearOf(c);
+    const floor = floorOf(c);
+    const dpe = c.etiquette_dpe || '?';
+    const ges = c.etiquette_ges || '?';
+
+    const links = [];
+    if (pt) links.push(`<a href="https://www.google.com/maps?q=&layer=c&cbll=${pt[0]},${pt[1]}" class="js-streetview" data-lat="${pt[0]}" data-lng="${pt[1]}" target="_blank" rel="noopener">Street View</a>`);
+    if (pt) links.push(`<a href="https://www.google.com/maps/place/${pt[0]},${pt[1]}/@${pt[0]},${pt[1]},19z/data=!3m1!1e3" target="_blank" rel="noopener">Satellite</a>`);
+    if (pt) links.push(`<a href="https://www.google.com/maps/place/${pt[0]},${pt[1]}" target="_blank" rel="noopener">Google Maps</a>`);
+    if (c.numero_dpe) links.push(`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${encodeURIComponent(c.numero_dpe)}" target="_blank" rel="noopener">Fiche DPE</a>`);
+    links.push(`<a href="https://app.dvf.etalab.gouv.fr/" target="_blank" rel="noopener">DVF</a>`);
+    if (c.numero_dpe) links.push(`<a href="https://www.google.com/search?q=${encodeURIComponent(`"${c.numero_dpe}"`)}" target="_blank" rel="noopener">Chercher le n° DPE</a>`);
+
+    return `<article class="card">
+      <div class="card-head">
+        <div>
+          <h3>${esc(addr)}</h3>
+          <div class="meta" style="margin-top:6px">
+            <span class="pill">${esc(surf)}</span>
+            <span class="pill" style="background:${dpeColor(dpe)}22;color:#15202b">DPE ${esc(dpe)}</span>
+            <span class="pill" style="background:${dpeColor(ges)}22;color:#15202b">GES ${esc(ges)}</span>
+            ${year ? `<span class="pill">${esc(year)}</span>` : ''}
+            ${floor !== null ? `<span class="pill">étage ${esc(floor)}</span>` : ''}
+            ${c.type_energie_principale_chauffage ? `<span class="pill">${esc(c.type_energie_principale_chauffage)}</span>` : ''}
+          </div>
+        </div>
+        <div class="score ${scoreClass(score)}">${score}<small>${labelFor(score)}</small></div>
+      </div>
+
+      <div class="reasons">
+        ${reasons.length
+          ? `<ul>${reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>`
+          : 'Aucun signal fort — candidat à vérifier.'}
+      </div>
+
+      <div class="meta">
+        ${c.numero_dpe ? `<span class="pill">n° ${esc(c.numero_dpe)}</span>` : ''}
+        ${c.date_etablissement_dpe ? `<span class="pill">DPE du ${esc(c.date_etablissement_dpe)}</span>` : ''}
+        ${c.nombre_appartement ? `<span class="pill">${esc(c.nombre_appartement)} appart.</span>` : ''}
+        ${c.complement_adresse_batiment ? `<span class="pill">${esc(c.complement_adresse_batiment)}</span>` : ''}
+      </div>
+
+      <div class="links">${links.join('')}</div>
+    </article>`;
+  }
+
+  function initMap(top) {
+    if (!state.map) {
+      state.map = L.map('map', { scrollWheelZoom: true }).setView([46.6, 2.4], 6);
+      L.tileLayer(
+        'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+        { attribution: '© IGN — Géoplateforme', maxZoom: 19 }
+      ).addTo(state.map);
+    }
+
+    if (state.layer) state.layer.remove();
+    state.layer = L.layerGroup().addTo(state.map);
+
+    const pts = [];
+    top.forEach(({ c, score }) => {
+      const pt = pointOf(c);
+      if (!pt) return;
+      pts.push(pt);
+      L.circleMarker(pt, {
+        radius: score >= 80 ? 9 : score >= 60 ? 7 : 5,
+        color: '#fff',
+        weight: 2,
+        fillColor: score >= 80 ? '#1a7f37' : score >= 60 ? '#b26a00' : '#b42318',
+        fillOpacity: 0.92
+      })
+        .bindPopup(
+          `<strong>${esc(c.adresse_ban || '')}</strong><br>` +
+          `Score ${score}/100 · DPE ${esc(c.etiquette_dpe || '?')} · ` +
+          `${esc(c.surface_habitable_logement ? Number(c.surface_habitable_logement).toFixed(1) + ' m²' : '')}<br>` +
+          `<a href="https://www.google.com/maps?q=&layer=c&cbll=${pt[0]},${pt[1]}" class="js-streetview" data-lat="${pt[0]}" data-lng="${pt[1]}" target="_blank" rel="noopener">Ouvrir Street View</a>`
+        )
+        .addTo(state.layer);
+    });
+
+    if (pts.length === 1) state.map.setView(pts[0], 17);
+    else if (pts.length) state.map.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Événements
+  // ---------------------------------------------------------------------------
+  $('searchBtn').addEventListener('click', search);
+  $('city').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      search();
+    }
+  });
+  $('adText').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      $('parseBtn').click();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Street View : on recale le point DPE sur la route la plus proche
+  // (le DPE est souvent au centre du bâtiment, pas sur la chaussée)
+  // ---------------------------------------------------------------------------
+  document.addEventListener('click', async (e) => {
+    const a = e.target.closest('a.js-streetview');
+    if (!a) return;
+    e.preventDefault();
+
+    const lat = a.dataset.lat;
+    const lng = a.dataset.lng;
+    const win = window.open('about:blank', '_blank');
+    if (win) {
+      win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Street View…</title></head><body style="font-family:system-ui;padding:24px;color:#15202b">Recherche du panorama le plus proche…</body></html>');
+      win.document.close();
+    }
+
+    let sLat = lat;
+    let sLng = lng;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      const r = await fetch(`https://router.project-osrm.org/nearest/v1/driving/${lng},${lat}?number=1`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const j = await r.json();
+      const loc = j.waypoints && j.waypoints[0] && j.waypoints[0].location;
+      if (loc) {
+        sLng = loc[0];
+        sLat = loc[1];
+      }
+    } catch (err) {
+      // On garde les coordonnées d'origine.
+    }
+
+    const url = `https://www.google.com/maps?q=&layer=c&cbll=${sLat},${sLng}`;
+    if (win) win.location.href = url;
+    else window.location.href = url;
+  });
+})();
+</script>
+</body>
+</html>

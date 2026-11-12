@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102a26" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Valentine" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Installer Valentine sur iPhone</title>
+  <style>
+    :root { --paper:#f6f2ea; --ink:#102a26; --muted:#6d7e78; --line:#e2dacd; --accent:#d95d39; --card:#fffdf9; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--paper); color:var(--ink); }
+    main { max-width: 720px; margin: 0 auto; padding: 40px 18px 70px; }
+    h1 { font-family: Georgia, serif; font-size: 2.15rem; letter-spacing: -.03em; margin: 0 0 8px; text-align:center; }
+    .sub { text-align:center; color:var(--muted); line-height:1.55; margin: 0 0 20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:20px; box-shadow:0 18px 45px rgba(16,42,38,.08); margin-bottom:16px; }
+    .qr-wrap { display:flex; gap:20px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    #qr { width:210px; height:210px; background:#fffdf9; border-radius:14px; padding:10px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+    #qr img, #qr canvas { max-width:100%; height:auto; }
+    .qr-copy { min-width:220px; flex:1; }
+    .qr-copy strong { display:block; margin-bottom:5px; }
+    .qr-copy code { display:block; background:#f1ece3; padding:9px 10px; border-radius:9px; word-break:break-all; font-size:.76rem; line-height:1.4; }
+    ol.steps { margin: 10px 0 0; padding-left: 22px; line-height: 1.7; font-size:.92rem; }
+    ol.steps li { margin-bottom: 8px; }
+    .step-num { display:inline-flex; width:24px; height:24px; border-radius:50%; background:var(--ink); color:#fff9ee; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; margin-right:6px; }
+    .note { background:#fff8ea; border:1px dashed #e9c98f; border-radius:12px; padding:11px 13px; font-size:.8rem; color:#7a4b08; line-height:1.5; }
+    h2 { font-family: Georgia, serif; font-size:1.3rem; margin:0 0 8px; }
+    p { line-height:1.55; color:var(--muted); }
+    a { color:#b94828; font-weight:700; }
+    .btn { display:inline-block; margin-top:10px; background:var(--accent); color:#fff; text-decoration:none; padding:11px 16px; border-radius:11px; font-weight:800; font-size:.84rem; }
+    .btn.ghost { background:transparent; border:1px solid var(--line); color:var(--ink); }
+    .ios-share { display:inline-block; border:1.5px solid var(--ink); border-radius:7px; padding:1px 6px; font-size:.8rem; }
+    @media (max-width:520px) {
+      h1 { font-size:1.7rem; }
+      .card { padding:15px; }
+      .qr-wrap { flex-direction:column; align-items:stretch; }
+      #qr { align-self:center; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Valentine sur iPhone</h1>
+  <p class="sub">Pas besoin de l’App Store. Tu l’ajoutes à l’écran d’accueil : il s’ouvre en plein écran comme une application.</p>
+
+  <section class="card">
+    <div class="qr-wrap">
+      <div id="qr"></div>
+      <div class="qr-copy">
+        <strong>Scanne ce code avec l’iPhone</strong>
+        <code id="siteUrl"></code>
+        <a class="btn ghost" id="copyLink" href="#">Copier le lien</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Installation en 4 étapes</h2>
+    <ol class="steps">
+      <li><span class="step-num">1</span>Ouvre le lien dans <strong>Safari</strong> (pas Chrome).</li>
+      <li><span class="step-num">2</span>Appuie sur le bouton <strong>Partager</strong> <span class="ios-share">□↑</span> en bas de l’écran.</li>
+      <li><span class="step-num">3</span>Fais défiler et choisis <strong>« Sur l’écran d’accueil »</strong>.</li>
+      <li><span class="step-num">4</span>Appuie sur <strong>« Ajouter »</strong> en haut à droite.</li>
+    </ol>
+    <div class="note" style="margin-top:14px">
+      L’icône <strong>Valentine</strong> apparaît sur ton écran d’accueil. Elle ouvre le site en plein écran, sans barre d’adresse.
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Et sur Android ?</h2>
+    <p>Ouvre le lien dans Chrome → menu <strong>⋮</strong> → <strong>« Installer l’application »</strong> ou <strong>« Ajouter à l’écran d’accueil »</strong>.</p>
+  </section>
+
+  <section class="card">
+    <h2>Une vraie application App Store ?</h2>
+    <p>
+      Oui, c’est possible avec <strong>Capacitor</strong> : le site est enveloppé dans une coquille iOS native.
+      Il faut un <strong>Mac avec Xcode</strong>, un compte <strong>Apple Developer</strong> (99 €/an) et un serveur
+      permanent pour l’API. Pour une app publique, il faut aussi ajouter des fonctions natives
+      (notifications, favoris hors ligne, partage) pour passer la validation Apple.
+    </p>
+    <p>Le guide de déploiement est dans <code>DEPLOYMENT.md</code>. La version PWA ci-dessus marche dès maintenant, sans compte Apple.</p>
+  </section>
+
+  <p style="text-align:center"><a href="search.html">← Retour à Valentine</a></p>
+</main>
+
+<script>
+(() => {
+  const url = `${location.origin}/search.html`;
+  document.getElementById('siteUrl').textContent = url;
+  document.getElementById('copyLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await navigator.clipboard.writeText(url);
+      e.target.textContent = 'Lien copié ✓';
+    } catch (err) {
+      window.prompt('Copie ce lien :', url);
+    }
+  });
+
+  function drawFallback() {
+    const box = document.getElementById('qr');
+    box.innerHTML = `<div style="padding:10px;text-align:center;font-size:.76rem;color:#6d7e78">
+      Ouvre simplement<br><strong style="color:#102a26;word-break:break-all">${url}</strong><br>dans Safari.
+    </div>`;
+  }
+
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+  script.onload = () => {
+    try {
+      new QRCode(document.getElementById('qr'), {
+        text: url,
+        width: 190,
+        height: 190,
+        colorDark: '#102a26',
+        colorLight: '#fffdf9',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (e) {
+      drawFallback();
+    }
+  };
+  script.onerror = drawFallback;
+  document.head.appendChild(script);
+})();
+</script>
+</body>
+</html>

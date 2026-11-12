@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Importer SeLoger ou Leboncoin — Valentine</title>
+  <style>
+    :root { --paper:#f6f2ea; --ink:#102a26; --muted:#6d7e78; --line:#e2dacd; --accent:#d95d39; --accent-dark:#b94828; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--paper); color:var(--ink); }
+    main { max-width: 820px; margin: 0 auto; padding: 36px 18px 70px; }
+    h1 { font-family: Georgia, serif; font-size: 2.15rem; letter-spacing: -.03em; margin: 0 0 8px; }
+    h2 { font-family: Georgia, serif; font-size: 1.35rem; letter-spacing: -.02em; margin: 0 0 8px; }
+    p { color: var(--muted); line-height: 1.55; margin: 0 0 10px; }
+    .hero { text-align:center; margin-bottom: 18px; }
+    .hero p { max-width: 650px; margin: 0 auto; }
+    .card { background:#fffdf9; border:1px solid var(--line); border-radius:20px; padding:20px; box-shadow:0 18px 45px rgba(16,42,38,.08); margin-bottom:16px; }
+    .magic { border:2px solid var(--accent); background:#fff8f3; }
+    .magic ol { margin: 12px 0 14px; padding-left: 22px; color: var(--ink); line-height: 1.7; font-size:.9rem; }
+    .magic ol li { margin-bottom: 4px; }
+    .bookmarklet {
+      display:inline-block;
+      margin: 4px 0 6px;
+      padding: 14px 20px;
+      border-radius: 13px;
+      background: var(--accent);
+      color:#fff;
+      font-weight: 800;
+      font-size: .95rem;
+      text-decoration:none;
+      cursor: grab;
+      box-shadow: 0 10px 24px rgba(217,93,57,.28);
+      user-select: none;
+    }
+    .bookmarklet:active { cursor: grabbing; }
+    .drag-hint { font-size:.78rem; color:var(--accent-dark); font-weight:700; }
+    .status { margin-top:12px; font-size:.86rem; line-height:1.5; }
+    .status.error { color:#b42318; }
+    .status.ok { color:#1a7f37; }
+    .status.info { color:#8a4b06; }
+    label { display:block; font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:14px 0 6px; }
+    input, textarea { width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; background:#fbf8f2; font:inherit; color:var(--ink); }
+    textarea { min-height:220px; resize:vertical; font-family: ui-monospace, Consolas, monospace; font-size:.76rem; }
+    button { margin-top:12px; border:0; border-radius:12px; padding:12px 18px; background:var(--accent); color:#fff; font-weight:800; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:wait; }
+    details { background:#fffdf9; border:1px solid var(--line); border-radius:16px; padding:14px 16px; }
+    summary { cursor:pointer; font-weight:800; font-size:.86rem; }
+    a { color:#b94828; font-weight:700; }
+    code { background:#f1ece3; padding:2px 5px; border-radius:5px; }
+    .counts { margin-top:10px; font-size:.82rem; color:var(--muted); }
+    .counts b { color:var(--ink); }
+    .back { margin-top: 18px; }
+    .switch { display:flex; gap:8px; flex-wrap:wrap; }
+    .switch button { margin:0; flex:1; min-width:130px; background:#fbf8f2; color:var(--ink); border:1px solid var(--line); }
+    .switch button.active { background:var(--ink); color:#fff9ee; border-color:var(--ink); }
+    .steps { font-size:.82rem; color:var(--muted); line-height:1.6; }
+    .steps strong { color:var(--ink); }
+    @media (max-width:520px) {
+      h1 { font-size:1.7rem; }
+      .card { padding:15px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <h1>Importer SeLoger ou Leboncoin</h1>
+    <p>Pas besoin de copier du code. Tu glisses un bouton dans tes favoris, puis tu cliques dessus sur la page SeLoger ou Leboncoin.</p>
+  </div>
+
+  <section class="card magic">
+    <h2>Le plus simple : le favori magique</h2>
+    <ol>
+      <li>Affiche la barre de favoris avec <code>Ctrl + Maj + B</code>.</li>
+      <li><strong>Glisse</strong> le bouton orange ci-dessous dans la barre de favoris.</li>
+      <li>Ouvre SeLoger ou Leboncoin, fais ta recherche normalement.</li>
+      <li>Clique sur le favori <strong>« Importer dans Valentine »</strong>.</li>
+      <li>Une popup dit « X annonces importées ». Reviens ici et relance la recherche.</li>
+    </ol>
+    <a id="bookmarklet" class="bookmarklet" href="#" draggable="true">📥 Importer cette page dans Valentine</a>
+    <div class="drag-hint">← Glisse ce bouton dans les favoris. Ne clique pas dessus ici.</div>
+    <div id="bookmarkletStatus" class="status"></div>
+  </section>
+
+  <section class="card">
+    <h2>Voir ce qui est déjà importé</h2>
+    <div id="counts" class="counts">Chargement…</div>
+    <p class="steps" style="margin-top:10px">
+      Après un import, ouvre Valentine et clique sur l’onglet <strong>« Importées »</strong> sous les résultats.
+      Les annonces SeLoger et Leboncoin apparaissent aussi dans les sources.
+    </p>
+    <a href="search.html"><button type="button">Ouvrir Valentine</button></a>
+  </section>
+
+  <details>
+    <summary>Autre méthode : coller le code de la page (plus technique)</summary>
+    <p class="steps" style="margin-top:10px">
+      <strong>Important :</strong> la case « HTML » doit contenir le <strong>code source</strong> de la page,
+      pas son adresse. Si tu colles un lien, ça ne marchera pas.
+    </p>
+    <label>Source</label>
+    <div class="switch" id="sourceSwitch">
+      <button type="button" data-source="SeLoger">SeLoger</button>
+      <button type="button" data-source="Leboncoin">Leboncoin</button>
+    </div>
+    <label>URL de la page (optionnelle)</label>
+    <input id="url" placeholder="https://www.seloger.com/… ou https://www.leboncoin.fr/ad/…" />
+    <label>Code HTML de la page</label>
+    <textarea id="html" placeholder="Colle ici le code HTML complet de la page…"></textarea>
+    <button id="send" type="button">Importer ce code</button>
+    <div id="status" class="status"></div>
+    <p class="steps">
+      Pour obtenir le code : <code>F12</code> → onglet <strong>Elements</strong> → clic droit sur
+      <code>&lt;html&gt;</code> → <strong>Copy</strong> → <strong>Copy outerHTML</strong>.
+      L’extension <a href="se-loger-extension/README.md">Valentine pour Chrome / Edge</a> fait la même chose en un clic.
+      <br><a href="valentine-import-extension.zip" download>Télécharger l’extension Valentine (.zip)</a>
+      — dézippe le fichier, puis charge le dossier dans <code>chrome://extensions</code>.
+    </p>
+  </details>
+
+  <p class="back"><a href="search.html">← Retour à la recherche</a></p>
+</main>
+
+<script>
+(() => {
+  const API = (() => {
+    if (typeof window.VALENTINE_API === 'string') return window.VALENTINE_API.replace(/\/$/, '');
+    try {
+      const saved = localStorage.getItem('valentine.apiBase');
+      if (saved !== null) return saved.replace(/\/$/, '');
+    } catch (e) { /* stockage indisponible */ }
+    if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+      return `${location.protocol}//${location.hostname}:8766`;
+    }
+    return '';
+  })();
+  const API_ORIGIN = API || location.origin;
+  const $ = (id) => document.getElementById(id);
+  let source = 'SeLoger';
+
+  function buildBookmarklet() {
+    const endpoint = `${API_ORIGIN}/api/import`;
+    const code = `(async()=>{try{const html=document.documentElement.outerHTML;const src=location.hostname.includes('leboncoin')?'Leboncoin':'SeLoger';const r=await fetch(${JSON.stringify(endpoint)},{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:location.href,html:html,source:src})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));alert(j.count?('✅ '+j.count+' annonce'+(j.count>1?'s':'')+' importée'+(j.count>1?'s':'')+' dans Valentine. Reviens sur Valentine et relance la recherche.'):'⚠️ Aucune annonce détectée. Ouvre une page de résultats ou une annonce complète.');}catch(e){alert('❌ Impossible de joindre Valentine : '+e.message);}})()`;
+    $('bookmarklet').href = `javascript:${code}`;
+  }
+
+  function setSource(next) {
+    source = next === 'Leboncoin' ? 'Leboncoin' : 'SeLoger';
+    document.querySelectorAll('#sourceSwitch button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.source === source);
+    });
+    $('html').placeholder = source === 'Leboncoin'
+      ? 'Colle ici le code HTML complet d’une page Leboncoin…'
+      : 'Colle ici le code HTML complet d’une page SeLoger…';
+  }
+
+  function detectSource() {
+    const url = $('url').value.trim().toLowerCase();
+    if (url.includes('leboncoin.fr')) setSource('Leboncoin');
+    else if (url.includes('seloger.com')) setSource('SeLoger');
+  }
+
+  async function loadCounts() {
+    try {
+      const r = await fetch(`${API}/api/sources`);
+      const j = await r.json();
+      const imported = j.imported || {};
+      $('counts').innerHTML = `Déjà importé : <b>${imported.SeLoger || 0} annonce(s) SeLoger</b> · <b>${imported.Leboncoin || 0} annonce(s) Leboncoin</b>`;
+    } catch (e) {
+      $('counts').textContent = 'API Valentine indisponible. Lance api_server.py.';
+    }
+  }
+
+  $('bookmarklet').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('bookmarkletStatus').className = 'status info';
+    $('bookmarkletStatus').textContent = 'Ce bouton doit être glissé dans la barre de favoris, pas cliqué ici. Affiche la barre avec Ctrl + Maj + B, puis glisse-le dedans.';
+  });
+  $('bookmarklet').addEventListener('dragstart', () => {
+    $('bookmarkletStatus').className = 'status ok';
+    $('bookmarkletStatus').textContent = 'Bouton prêt. Dépose-le dans la barre de favoris.';
+  });
+
+  $('sourceSwitch').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-source]');
+    if (b) setSource(b.dataset.source);
+  });
+  $('url').addEventListener('input', detectSource);
+  $('url').addEventListener('paste', () => setTimeout(detectSource, 0));
+
+  $('html').addEventListener('input', () => {
+    const value = $('html').value.trim();
+    if (/^https?:\/\//i.test(value)) {
+      $('status').className = 'status error';
+      $('status').textContent = 'Tu as collé un lien, pas le code de la page. Utilise le favori magique ci-dessus, ou copie le HTML avec F12 → Elements → clic droit sur <html> → Copy outerHTML.';
+    }
+  });
+
+  $('send').addEventListener('click', async () => {
+    const html = $('html').value.trim();
+    if (!html) {
+      $('status').className = 'status error';
+      $('status').textContent = 'Colle d’abord le code HTML de la page.';
+      return;
+    }
+    if (/^https?:\/\//i.test(html)) {
+      $('status').className = 'status error';
+      $('status').textContent = 'C’est un lien, pas du HTML. Le favori magique est plus simple : glisse-le dans les favoris, puis clique dessus sur SeLoger.';
+      return;
+    }
+    $('send').disabled = true;
+    $('status').className = 'status';
+    $('status').textContent = 'Import en cours…';
+    try {
+      const r = await fetch(`${API}/api/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: $('url').value.trim(), html, source })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      const found = j.source || source;
+      $('status').className = j.count ? 'status ok' : 'status error';
+      $('status').innerHTML = j.count
+        ? `${j.count} annonce${j.count > 1 ? 's' : ''} ${found} importée${j.count > 1 ? 's' : ''}. <a href="search.html">Ouvrir Valentine</a>`
+        : `Aucune annonce détectée dans cette page. Essaie une page de résultats ou une page d’annonce complète.`;
+      loadCounts();
+    } catch (e) {
+      $('status').className = 'status error';
+      $('status').textContent = `Erreur : ${e.message}`;
+    } finally {
+      $('send').disabled = false;
+    }
+  });
+
+  const params = new URLSearchParams(location.search);
+  const requested = (params.get('source') || '').toLowerCase();
+  setSource(requested === 'leboncoin' ? 'Leboncoin' : 'SeLoger');
+  buildBookmarklet();
+  loadCounts();
+})();
+</script>
+</body>
+</html>

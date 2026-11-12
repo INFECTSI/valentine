@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Valentine">
+  <rect width="512" height="512" rx="112" fill="#102a26"/>
+  <circle cx="256" cy="238" r="150" fill="none" stroke="#f7f1e6" stroke-opacity=".12" stroke-width="10"/>
+  <path d="M148 292V196l108-84 108 84v96" fill="none" stroke="#f2b59f" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M218 292v-72h76v72" fill="none" stroke="#f7f1e6" stroke-opacity=".7" stroke-width="16"/>
+  <path d="M120 330h272" stroke="#f7f1e6" stroke-opacity=".55" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="356" cy="150" r="18" fill="#d95d39"/>
+</svg>

@@ -1,0 +1,4388 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102a26" />
+  <meta name="description" content="Valentine croise les annonces immobilières, retrouve l’adresse grâce aux DPE ADEME et vérifie sur place." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Valentine" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Valentine — trouvez la maison, pas juste l'annonce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --paper: #f6f2ea;
+      --paper-2: #efe8dc;
+      --card: #fffdf9;
+      --ink: #102a26;
+      --ink-soft: #38514b;
+      --muted: #6d7e78;
+      --line: #e2dacd;
+      --line-dark: #cfc5b5;
+      --accent: #d95d39;
+      --accent-dark: #b94828;
+      --accent-soft: #fbe7df;
+      --sage: #1f5b4d;
+      --sage-soft: #e2efe9;
+      --gold: #b98a3e;
+      --ok: #1a7f37;
+      --warn: #b26a00;
+      --bad: #b42318;
+      --shadow: 0 18px 45px rgba(16, 42, 38, .09);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 8% 18%, rgba(217, 93, 57, .06), transparent 28%),
+        radial-gradient(circle at 92% 6%, rgba(31, 91, 77, .08), transparent 26%),
+        var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .eyebrow::before {
+      content: "";
+      width: 22px;
+      height: 1px;
+      background: currentColor;
+      display: inline-block;
+    }
+    .hero-shell {
+      position: relative;
+      background:
+        radial-gradient(circle at 82% 20%, rgba(217, 93, 57, .18), transparent 26%),
+        linear-gradient(145deg, #0d2a25 0%, #143d34 58%, #1b4b3e 100%);
+      color: #f7f1e6;
+      padding: 0 20px 118px;
+      border-radius: 0 0 34px 34px;
+      overflow: hidden;
+    }
+    .hero-shell::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -55% 55%;
+      height: 520px;
+      border: 1px solid rgba(247, 241, 230, .16);
+      border-radius: 50%;
+      transform: rotate(-12deg);
+      pointer-events: none;
+    }
+    .topbar {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 22px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+      z-index: 2;
+    }
+    .brand {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      text-decoration: none;
+      color: #fff9ee;
+    }
+    .brand span { color: var(--accent); }
+    .topbar-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .topbar-links a, .topbar-links button {
+      background: transparent;
+      border: 1px solid rgba(247, 241, 230, .22);
+      color: #f7f1e6;
+      text-decoration: none;
+      padding: 9px 13px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    .topbar-links a:hover, .topbar-links button:hover {
+      background: rgba(247, 241, 230, .1);
+      border-color: rgba(247, 241, 230, .4);
+    }
+    .topbar-links .install-link { display: none; }
+    .topbar-links .import-topbtn {
+      border-color: rgba(217, 93, 57, .75);
+      background: rgba(217, 93, 57, .16);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .topbar-links .import-topbtn:hover { background: rgba(217, 93, 57, .3); }
+    .import-badge {
+      min-width: 19px;
+      height: 19px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .68rem;
+      font-weight: 800;
+    }
+    .hero {
+      max-width: 1240px;
+      margin: 54px auto 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+      gap: 30px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      padding-bottom: 82px;
+    }
+    .hero h1 {
+      margin: 16px 0 18px;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(2.8rem, 5.7vw, 5.3rem);
+      line-height: .98;
+      letter-spacing: -.045em;
+      font-weight: 600;
+      max-width: 780px;
+    }
+    .hero h1 em {
+      color: #f2b59f;
+      font-style: italic;
+    }
+    .hero-copy p {
+      margin: 0;
+      max-width: 610px;
+      color: rgba(247, 241, 230, .78);
+      font-size: 1.04rem;
+      line-height: 1.6;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .hero-badges span {
+      border: 1px solid rgba(247, 241, 230, .2);
+      background: rgba(247, 241, 230, .06);
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: .76rem;
+      font-weight: 600;
+      color: rgba(247, 241, 230, .88);
+    }
+    .hero-art {
+      position: relative;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero-art svg {
+      width: min(100%, 360px);
+      height: auto;
+      overflow: visible;
+      filter: drop-shadow(0 24px 30px rgba(0, 0, 0, .18));
+    }
+    .search-card {
+      position: relative;
+      z-index: 4;
+      max-width: 1180px;
+      margin: -78px auto 0;
+      background: rgba(255, 253, 249, .98);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, .65);
+      border-radius: 24px;
+      box-shadow: 0 28px 70px rgba(8, 28, 23, .24);
+      padding: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .search-tabs {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid var(--line);
+      margin: -2px -2px 14px;
+      padding: 0 2px;
+    }
+    .search-tab {
+      background: transparent;
+      border: 0;
+      padding: 10px 12px 12px;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .search-tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--accent);
+    }
+    .search-main {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1.4fr) minmax(130px, .8fr) minmax(120px, .65fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .type-toggle {
+      display: flex;
+      padding: 4px;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      height: 48px;
+    }
+    .type-toggle button {
+      border: 0;
+      background: transparent;
+      border-radius: 9px;
+      padding: 0 13px;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .type-toggle button.active {
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(16, 42, 38, .09);
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+    .field > span {
+      font-size: .66rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-left: 2px;
+    }
+    .field input, .field select, .url-row input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--line);
+      background: #fbf8f2;
+      border-radius: 13px;
+      padding: 0 13px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .field input:focus, .field select:focus, .url-row input:focus {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(217, 93, 57, .12);
+    }
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 13px;
+      padding: 12px 18px;
+      font-weight: 700;
+      font-size: .9rem;
+      white-space: nowrap;
+      transition: transform .15s, background .18s, border-color .18s, box-shadow .18s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 10px 22px rgba(217, 93, 57, .24);
+      height: 48px;
+    }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--line-dark);
+      color: var(--ink);
+    }
+    .btn-ghost:hover { background: var(--paper-2); }
+    .btn-soft {
+      background: var(--sage-soft);
+      color: var(--sage);
+      border-color: #c8ded4;
+    }
+    .btn-soft:hover { background: #d5e8df; }
+    .btn[disabled] { opacity: .55; cursor: wait; }
+    .search-sub {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 0 2px;
+    }
+    .linkish {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: var(--accent-dark);
+      font-size: .82rem;
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: rgba(185, 72, 40, .3);
+      text-underline-offset: 3px;
+    }
+    .linkish:hover { text-decoration-color: currentColor; }
+    .quick-cities {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+    .quick-cities button {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: .74rem;
+      font-weight: 600;
+    }
+    .quick-cities button:hover { background: var(--paper-2); }
+    .advanced-search {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .search-status {
+      min-height: 18px;
+      margin: 11px 2px 0;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    .search-status.error { color: var(--bad); }
+    .search-status.ok { color: var(--sage); }
+    .url-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .url-row input { height: 50px; }
+    .hint {
+      margin: 10px 2px 0;
+      color: var(--muted);
+      font-size: .8rem;
+      line-height: 1.5;
+    }
+    .map-panel {
+      max-width: 1180px;
+      margin: 20px auto 0;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 16px;
+    }
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .map-head h2 {
+      margin: 0 0 3px;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.35rem;
+      letter-spacing: -.02em;
+    }
+    .map-head p { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+    .map-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .map-controls select {
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbf8f2;
+      padding: 0 10px;
+      color: var(--ink);
+    }
+    .map-controls button {
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: transparent;
+      padding: 0 12px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .map-controls button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .map-drawing #map { cursor: crosshair; }
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .switch input { accent-color: var(--accent); width: 16px; height: 16px; }
+    .zone-count { margin-left: auto; color: var(--muted); font-size: .78rem; }
+    #map {
+      height: 390px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #e9eef3;
+      overflow: hidden;
+    }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--sage-soft);
+      color: var(--sage);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: .74rem;
+      font-weight: 700;
+    }
+    .chip a { text-decoration: none; color: inherit; font-weight: 900; }
+    .city-picker { max-width: 440px; margin-top: 12px; }
+    .city-picker label {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .city-picker input {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fbf8f2;
+      padding: 0 12px;
+      outline: none;
+    }
+    .autocomplete {
+      position: relative;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      margin-top: 4px;
+      box-shadow: 0 14px 30px rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+    .autocomplete button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 12px;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      font-weight: 500;
+      font-size: .82rem;
+    }
+    .autocomplete button:hover { background: #f6f2ea; }
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 20px 70px;
+    }
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+    .results-header h2 {
+      margin: 4px 0 4px;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(1.8rem, 3.4vw, 2.7rem);
+      letter-spacing: -.04em;
+      line-height: 1.05;
+    }
+    .results-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .85rem;
+      line-height: 1.45;
+    }
+    .source-summary {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      max-width: 520px;
+    }
+    .source-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .source-summary .src-badge { font-size: .7rem; }
+    .src-score {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .source-summary .total {
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: .7rem;
+      font-weight: 700;
+    }
+    .source-tabs {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .source-tab {
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 249, .7);
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: .77rem;
+      font-weight: 700;
+    }
+    .source-tab .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      background: var(--muted);
+    }
+    .source-tab.active {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff9ee;
+    }
+    .source-tab.active .dot { background: #f2b59f; }
+    .city-summary {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 0 0 8px;
+    }
+    .city-summary .city-label {
+      color: var(--muted);
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-right: 2px;
+    }
+    .city-summary .city-chip {
+      background: #fffdf9;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: .72rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+    .city-summary .city-chip b { color: var(--ink); margin-left: 3px; }
+    .toolbar {
+      position: sticky;
+      top: 8px;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      margin-bottom: 6px;
+      background: rgba(246, 242, 234, .9);
+      backdrop-filter: blur(12px);
+    }
+    .sort-tabs {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .sort-tabs button {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: .77rem;
+      font-weight: 700;
+    }
+    .sort-tabs button.active {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: #fff;
+    }
+    .toolbar .btn-ghost { padding: 7px 12px; font-size: .77rem; border-radius: 999px; }
+    .quick-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 4px 0 10px;
+    }
+    .quick-chips button {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .74rem;
+      font-weight: 600;
+    }
+    .quick-chips button.active {
+      background: var(--accent-soft);
+      border-color: #efc2b2;
+      color: var(--accent-dark);
+    }
+    .advanced-filters {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(16,42,38,.04);
+    }
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .advanced-actions {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .checkline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .checkline input { accent-color: var(--accent); width: 15px; height: 15px; }
+    .stats {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.45;
+      margin: 4px 0 14px;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .listing {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 3px 12px rgba(16,42,38,.04);
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+      animation: rise .45s both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .listing:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 20px 40px rgba(16,42,38,.12);
+      border-color: var(--line-dark);
+    }
+    .listing-media {
+      position: relative;
+      min-height: 225px;
+      background: linear-gradient(135deg, #dfe8e2, #f3ede2);
+      overflow: hidden;
+    }
+    .listing-photo {
+      width: 100%;
+      height: 235px;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-placeholder {
+      height: 235px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--sage);
+      background:
+        radial-gradient(circle at 70% 25%, rgba(217,93,57,.15), transparent 30%),
+        linear-gradient(135deg, #dfe8e2, #f3ede2);
+    }
+    .photo-placeholder svg { width: 100px; height: 100px; opacity: .55; }
+    .media-badges {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .media-badges .src-stack { display: flex; gap: 4px; flex-wrap: wrap; }
+    .src-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: .66rem;
+      font-weight: 800;
+      letter-spacing: .01em;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid rgba(16,42,38,.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .src-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+    }
+    .src-bienici::before { background: #0b6bcb; }
+    .src-logic::before { background: #e11d48; }
+    .src-c21::before { background: #c59a2f; }
+    .src-orpi::before { background: #d63b2f; }
+    .src-immonot::before { background: #2f7d5b; }
+    .src-iad::before { background: #7c3aed; }
+    .src-citya::before { background: #1f6fb2; }
+    .src-paruvendu::before { background: #f28c28; }
+    .src-nestenn::before { background: #00a6a6; }
+    .src-laforet::before { background: #2e8b57; }
+    .src-seloger::before { background: #e4002b; }
+    .dpe-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 8px;
+      font-weight: 900;
+      font-size: .78rem;
+      color: #102a26;
+      background: #e9eef3;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    .listing-body {
+      padding: 16px 17px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      flex: 1;
+    }
+    .listing-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .price {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -.035em;
+      line-height: 1;
+      color: var(--ink);
+    }
+    .date-label {
+      color: var(--muted);
+      font-size: .7rem;
+      text-align: right;
+      line-height: 1.35;
+      padding-top: 3px;
+    }
+    .listing h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.3;
+      letter-spacing: -.015em;
+    }
+    .location-line {
+      color: var(--ink-soft);
+      font-size: .8rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .location-line svg { width: 13px; height: 13px; flex: 0 0 auto; }
+    .features {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 1px;
+    }
+    .feature {
+      background: var(--paper);
+      border: 1px solid #eae2d6;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: .72rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+    .energy-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .energy {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 7px;
+      padding: 3px 7px;
+      font-size: .69rem;
+      font-weight: 800;
+      color: #183832;
+    }
+    .gap-pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: .66rem;
+      font-weight: 700;
+      background: #eef2f0;
+      color: var(--muted);
+    }
+    .gap-pill.near { background: #fff0d0; color: #7a4b00; }
+    .tag {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: .66rem;
+      font-weight: 700;
+      background: #eef2f0;
+      color: var(--muted);
+    }
+    .tag.exact { background: #dff3e6; color: #0b5d2a; }
+    .tag.duplicate { background: #f3e9ff; color: #5b2a86; }
+    .listing-desc {
+      color: var(--muted);
+      font-size: .79rem;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .listing-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 11px;
+      border-top: 1px solid var(--line);
+    }
+    .listing-footer .btn {
+      padding: 8px 11px;
+      font-size: .76rem;
+      border-radius: 9px;
+    }
+    .listing-footer a {
+      color: var(--ink-soft);
+      font-size: .74rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .listing-footer a:hover { color: var(--accent-dark); }
+    .resolve {
+      margin: 2px -17px -15px;
+      padding: 14px 17px 16px;
+      background: #fbf7f0;
+      border-top: 1px dashed var(--line-dark);
+      display: grid;
+      gap: 9px;
+    }
+    .resolve h3 {
+      margin: 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.05rem;
+      letter-spacing: -.01em;
+    }
+    .resolve .status { margin: 0; }
+    .candidate {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #fffdf9;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .candidate-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .candidate-distance {
+      flex: 0 0 auto;
+      font-size: .66rem;
+      font-weight: 700;
+      color: var(--muted);
+      padding-top: 2px;
+    }
+    .candidate-reason {
+      margin: 5px 0 0;
+      color: var(--ink-soft);
+      font-size: .7rem;
+      line-height: 1.4;
+    }
+    .score {
+      flex: 0 0 auto;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 1rem;
+      line-height: 1;
+      background: var(--warn);
+    }
+    .score small {
+      font-size: .48rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 800;
+      margin-top: 3px;
+      opacity: .9;
+    }
+    .score.high { background: var(--ok); }
+    .score.mid { background: var(--warn); }
+    .score.low { background: var(--bad); }
+    .candidate-body { min-width: 0; flex: 1; }
+    .candidate-body strong { font-size: .86rem; line-height: 1.3; display: block; }
+    .candidate-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .candidate-meta span {
+      font-size: .66rem;
+      color: var(--ink-soft);
+      background: var(--paper);
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-weight: 600;
+    }
+    .reasons { margin-top: 5px; color: var(--muted); font-size: .7rem; line-height: 1.4; }
+    .reasons ul { margin: 2px 0 0; padding-left: 15px; }
+    .candidate-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .candidate-links a { color: var(--accent-dark); font-size: .7rem; font-weight: 800; text-decoration: none; }
+    .candidate-links a:hover { text-decoration: underline; }
+    .status { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.45; }
+    .status.error { color: var(--bad); }
+    .status.ok { color: var(--sage); }
+    .notice {
+      font-size: .76rem;
+      color: var(--muted);
+      background: #fffaf1;
+      border: 1px solid #ecdfc8;
+      padding: 11px 13px;
+      border-radius: 12px;
+      line-height: 1.5;
+    }
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--muted);
+      padding: 50px 20px;
+      background: rgba(255,253,249,.7);
+      border: 1px dashed var(--line-dark);
+      border-radius: var(--radius);
+      line-height: 1.6;
+    }
+    .empty strong { display: block; color: var(--ink); font-family: "Fraunces", Georgia, serif; font-size: 1.4rem; margin-bottom: 5px; }
+    .skeleton {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 18px;
+    }
+    .sk-card {
+      height: 430px;
+      border-radius: var(--radius);
+      background: linear-gradient(100deg, #eee7dc 20%, #f7f2e9 45%, #eee7dc 70%);
+      background-size: 220% 100%;
+      animation: shimmer 1.1s infinite linear;
+    }
+    @keyframes shimmer { to { background-position: -220% 0; } }
+    .load-more { display: flex; justify-content: center; margin: 24px 0 10px; }
+    .load-more .btn { min-width: 220px; }
+    .url-result {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 26px;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 16px;
+    }
+    .url-result-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .url-result-head h2 {
+      margin: 3px 0 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.65rem;
+      letter-spacing: -.03em;
+    }
+    .analyzed {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fbf8f2;
+    }
+    .analyzed img, .analyzed .photo-placeholder {
+      width: 100%;
+      height: 170px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+    .analyzed .photo-placeholder { height: 170px; }
+    .analyzed-body { min-width: 0; }
+    .analyzed-body h3 { margin: 3px 0 6px; font-size: 1.1rem; line-height: 1.3; }
+    .analyzed-body .features { margin-top: 8px; }
+    .analyzed-body .desc { margin: 9px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    .url-candidates {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .url-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .url-actions .btn { padding: 8px 12px; font-size: .78rem; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 24, 20, .62);
+      backdrop-filter: blur(5px);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .modal-card {
+      background: var(--card);
+      border-radius: 20px;
+      width: min(1080px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      padding: 18px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.28);
+    }
+    .modal-head {
+      display: flex;
+      gap: 14px;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .modal-head h2 {
+      margin: 2px 0 4px;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.7rem;
+      letter-spacing: -.03em;
+    }
+    .modal-head p { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+    .sv-frame-wrap { position: relative; }
+    .sv-frame {
+      width: 100%;
+      height: min(66vh, 590px);
+      border: 0;
+      border-radius: 14px;
+      background: #e9eef3;
+    }
+    .sv-address-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+      max-width: 72%;
+      background: rgba(16, 42, 38, .88);
+      color: #fff9ee;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .86rem;
+      line-height: 1.3;
+      pointer-events: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,.22);
+    }
+    .sv-key-row { display: flex; gap: 8px; margin: 0 0 10px; }
+    .sv-key-row input {
+      flex: 1;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 11px;
+      background: #fbf8f2;
+      outline: none;
+    }
+    .dpe-modal-card { width: min(1180px, 100%); }
+    .dpe-summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: #fbf8f2;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 11px 12px;
+      margin-bottom: 14px;
+    }
+    .dpe-summary .price { font-size: 1.2rem; }
+    .dpe-summary .muted { color: var(--muted); font-size: .78rem; }
+    .dpe-date-note {
+      background: #fffaf1;
+      border: 1px solid #ecdfc8;
+      border-radius: 11px;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      color: var(--ink-soft);
+      font-size: .76rem;
+      line-height: 1.5;
+    }
+    .dpe-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .dpe-grid .candidate { align-items: stretch; }
+    .dpe-grid .score { width: 52px; height: 52px; }
+    .dpe-more {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    #svModal { z-index: 4000; }
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0 16px;
+    }
+    .source-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: #fbf8f2;
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .source-row .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex: 0 0 auto;
+      background: var(--ok);
+    }
+    .source-row.blocked .dot { background: var(--bad); }
+    .source-row.assisted .dot { background: #d97706; }
+    .source-row strong { display: block; font-size: .84rem; }
+    .source-row span { display: block; color: var(--muted); font-size: .72rem; line-height: 1.4; margin-top: 2px; }
+    .source-row .source-view { padding: 5px 8px; font-size: .7rem; align-self: center; }
+    .source-actions { margin-left: auto; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .source-row .source-import {
+      margin-left: auto;
+      padding: 5px 8px;
+      font-size: .7rem;
+      align-self: center;
+      border-radius: 8px;
+      border: 1px dashed #d97706;
+      background: #fff8ea;
+      color: #8a4b06;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .import-modal-card { width: min(880px, 100%); }
+    .import-steps {
+      margin: 4px 0 16px;
+      padding-left: 20px;
+      color: var(--ink-soft);
+      font-size: .86rem;
+      line-height: 1.65;
+    }
+    .import-steps li { margin-bottom: 4px; }
+    .import-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .import-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fbf8f2;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .import-card h3 {
+      margin: 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.2rem;
+      letter-spacing: -.02em;
+    }
+    .import-card p { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+    .import-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      background: var(--ink);
+      color: #fff9ee;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .84rem;
+      letter-spacing: .02em;
+    }
+    .import-card .import-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; }
+    .import-card .import-actions .btn { padding: 8px 11px; font-size: .74rem; text-decoration: none; }
+    .import-state.ok { color: #1a7f37; font-weight: 700; }
+    .import-help {
+      margin-top: 14px;
+      border: 1px dashed var(--line-dark);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: #fffdf9;
+      font-size: .8rem;
+      color: var(--ink-soft);
+      line-height: 1.55;
+    }
+    .import-help p { margin: 0 0 6px; }
+    .import-help code { background: #f1ece3; padding: 2px 5px; border-radius: 5px; }
+    .import-footer { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+    .import-toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 5000;
+      background: var(--ink);
+      color: #fff9ee;
+      border-radius: 14px;
+      padding: 13px 15px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.28);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: .82rem;
+      max-width: min(420px, calc(100vw - 28px));
+    }
+    .import-toast button {
+      border: 1px solid rgba(255,255,255,.35);
+      background: transparent;
+      color: #fff9ee;
+      border-radius: 9px;
+      padding: 6px 9px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .source-tab.src-import-tab { border-style: dashed; color: #8a4b06; background: #fff8ea; }
+    .src-import-chip {
+      border: 1px dashed #d97706;
+      background: #fff8ea;
+      color: #8a4b06;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: .72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .src-import-chip:hover { background: #ffefd2; }
+    .solution-list { margin: 6px 0 0; padding-left: 18px; color: var(--ink-soft); font-size: .82rem; line-height: 1.6; }
+    @media (max-width: 700px) {
+      .import-grid { grid-template-columns: 1fr; }
+    }
+    /* Assistant IA */
+    .ai-fab {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 2801;
+      border: 0;
+      border-radius: 999px;
+      padding: 13px 18px;
+      background: linear-gradient(135deg, #d95d39, #b94828);
+      color: #fff9ee;
+      font-weight: 800;
+      font-size: .86rem;
+      box-shadow: 0 16px 38px rgba(185, 72, 40, .38);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ai-fab:hover { transform: translateY(-1px); }
+    .ai-panel {
+      position: fixed;
+      right: 18px;
+      bottom: 82px;
+      z-index: 2800;
+      width: min(400px, calc(100vw - 24px));
+      height: min(680px, calc(100dvh - 110px));
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(8, 24, 20, .3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(14px) scale(.98);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .ai-panel.open { opacity: 1; transform: none; pointer-events: auto; }
+    .ai-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 14px;
+      background: var(--ink);
+      color: #fff9ee;
+    }
+    .ai-head strong { display: block; font-family: "Fraunces", Georgia, serif; font-size: 1.05rem; }
+    .ai-head span { display: block; font-size: .68rem; opacity: .72; margin-top: 2px; }
+    .ai-head-actions { display: flex; gap: 5px; }
+    .ai-head button {
+      border: 1px solid rgba(255,255,255,.24);
+      background: transparent;
+      color: #fff9ee;
+      width: 31px;
+      height: 31px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: .9rem;
+      line-height: 1;
+    }
+    .ai-head button:hover { background: rgba(255,255,255,.12); }
+    .ai-messages {
+      flex: 1;
+      overflow: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fbf8f2;
+    }
+    .ai-msg {
+      max-width: 88%;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: .82rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .ai-msg.user { align-self: flex-end; background: var(--ink); color: #fff9ee; border-bottom-right-radius: 4px; }
+    .ai-msg.assistant { align-self: flex-start; background: #fffdf9; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+    .ai-msg.action {
+      align-self: stretch;
+      max-width: 100%;
+      background: #fff4e8;
+      border: 1px dashed #efc9b9;
+      color: #8a4b06;
+      font-size: .74rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+    .ai-msg.error { align-self: stretch; max-width: 100%; background: #fff1ee; border: 1px solid #f3c4bb; color: #b42318; font-size: .76rem; }
+    .ai-suggestions {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 12px;
+      border-top: 1px solid var(--line);
+      background: #fffdf9;
+      flex: 0 0 auto;
+    }
+    .ai-suggestions button {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      background: #fbf8f2;
+      color: var(--ink-soft);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .7rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ai-suggestions button:hover { border-color: var(--accent); color: var(--accent-dark); }
+    .ai-form {
+      display: flex;
+      gap: 7px;
+      padding: 10px 12px 12px;
+      background: #fffdf9;
+      border-top: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .ai-form textarea {
+      flex: 1;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 11px;
+      background: #fbf8f2;
+      font: inherit;
+      font-size: .8rem;
+      color: var(--ink);
+      min-height: 42px;
+      max-height: 110px;
+      outline: none;
+    }
+    .ai-form textarea:focus { border-color: var(--accent); }
+    .ai-form button {
+      border: 0;
+      border-radius: 12px;
+      padding: 0 14px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      font-size: .78rem;
+      cursor: pointer;
+    }
+    .ai-form button:disabled { opacity: .5; cursor: wait; }
+    .ai-settings {
+      position: absolute;
+      inset: 0;
+      background: var(--card);
+      z-index: 2;
+      overflow: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .ai-settings.hidden { display: none; }
+    .ai-settings h3 { margin: 0 0 2px; font-family: "Fraunces", Georgia, serif; }
+    .ai-settings label { margin: 2px 0 0; }
+    .ai-settings input, .ai-settings select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #fbf8f2;
+      font: inherit;
+      font-size: .8rem;
+      color: var(--ink);
+    }
+    .ai-settings .ai-note { margin: 0; font-size: .72rem; color: var(--muted); line-height: 1.5; }
+    .ai-settings .ai-settings-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 4px; }
+    .ai-settings .ai-settings-actions button {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: .76rem;
+      cursor: pointer;
+    }
+    .ai-settings .ai-settings-actions button.ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+    }
+    .ai-settings .status { margin: 0; font-size: .76rem; }
+    .ai-settings .status.ok { color: #1a7f37; }
+    .ai-settings .status.error { color: #b42318; }
+    @media (max-width: 760px) {
+      .topbar-links .install-link { display: inline-flex; align-items: center; }
+    }
+    @media (max-width: 560px) {
+      .ai-panel {
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+        border: 0;
+      }
+      .ai-fab { right: 14px; bottom: 14px; padding: 12px 15px; }
+      .ai-form { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    }
+    /* Encoches et barre d’état iPhone en mode application */
+    @supports (padding: env(safe-area-inset-top)) {
+      .topbar { padding-top: max(22px, env(safe-area-inset-top)); }
+      .ai-fab { bottom: max(20px, env(safe-area-inset-bottom)); }
+      .modal-card { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+      .import-footer { padding-bottom: env(safe-area-inset-bottom); }
+    }
+    .solution-list li { margin-bottom: 5px; }
+    footer {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 20px 34px;
+      color: var(--muted);
+      font-size: .74rem;
+      line-height: 1.55;
+    }
+    footer a { color: var(--ink-soft); font-weight: 700; text-decoration: none; }
+    @media (max-width: 1080px) {
+      .search-main { grid-template-columns: auto minmax(200px,1.4fr) repeat(2, minmax(110px,.7fr)); }
+      .search-main .btn-primary { grid-column: 1 / -1; }
+      .advanced-search, .advanced-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .hero { grid-template-columns: minmax(0,1fr) 260px; }
+    }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; margin-top: 38px; }
+      .hero-art { display: none; }
+      .search-main { grid-template-columns: 1fr 1fr; }
+      .search-main .type-toggle { grid-column: 1 / -1; width: fit-content; }
+      .search-main .field-city { grid-column: 1 / -1; }
+      .search-main .btn-primary { grid-column: 1 / -1; }
+      .results-grid, .skeleton { grid-template-columns: 1fr; }
+      .sources-grid { grid-template-columns: 1fr; }
+      .dpe-grid, .url-candidates { grid-template-columns: 1fr; }
+      .analyzed { grid-template-columns: 1fr; }
+      .analyzed img, .analyzed .photo-placeholder { height: 210px; }
+    }
+    @media (max-width: 640px) {
+      .hero-shell { padding: 0 14px 104px; border-radius: 0 0 24px 24px; }
+      .topbar { padding-top: 16px; }
+      .brand { font-size: 1.4rem; }
+      .topbar-links a, .topbar-links button { padding: 7px 10px; font-size: .74rem; }
+      .hero h1 { font-size: 2.55rem; }
+      .hero-copy p { font-size: .92rem; }
+      .hero, .hero-copy { min-width: 0; }
+      .search-card { margin-top: -66px; padding: 12px; border-radius: 18px; }
+      .search-main { grid-template-columns: 1fr; }
+      .search-main .field, .search-main .btn-primary, .search-main .field-city { grid-column: 1; }
+      .quick-cities { margin-left: 0; }
+      .quick-cities button { font-size: .7rem; }
+      .advanced-search, .advanced-grid { grid-template-columns: 1fr 1fr; }
+      .page { padding: 22px 14px 55px; }
+      .results-section, .results-header { min-width: 0; width: 100%; }
+      .results-header { flex-direction: column; align-items: flex-start; }
+      .source-summary { align-items: flex-start; width: 100%; max-width: 100%; }
+      .source-chips { justify-content: flex-start; }
+      .source-tabs, .quick-chips, .sort-tabs { width: 100%; }
+      .toolbar { top: 0; flex-direction: column; align-items: flex-start; width: 100%; }
+      .map-panel { margin: 16px 14px 0; padding: 12px; }
+      #map { height: 320px; }
+      .map-head { flex-direction: column; }
+      .zone-count { margin-left: 0; }
+      .url-row { grid-template-columns: 1fr; }
+      .sv-key-row { flex-direction: column; }
+      .modal { padding: 10px; }
+      .modal-card { padding: 12px; }
+    }
+    @media (max-width: 440px) {
+      .topbar { flex-wrap: wrap; }
+      .topbar-links { width: 100%; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<header class="hero-shell">
+  <nav class="topbar">
+    <a class="brand" href="#">Valentine<span>.</span></a>
+    <div class="topbar-links">
+      <button id="importBtn" type="button" class="import-topbtn">Importer SeLoger / Leboncoin <span id="importBadge" class="import-badge hidden">0</span></button>
+      <a href="install-ios.html" class="install-link">📱 Installer l’app</a>
+      <button id="sourcesBtn" type="button">Sources &amp; données</button>
+      <a href="demo.html">Outil DPE manuel</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">L'immobilier, en clair</span>
+      <h1>Trouvez la maison.<br><em>Pas juste l'annonce.</em></h1>
+      <p>
+        Valentine croise les portails, retrouve l'adresse cachée grâce au DPE
+        et vous emmène devant la porte. Les annonces arrivent de plusieurs
+        sources, les doublons sont rapprochés, et la carte reste optionnelle.
+      </p>
+      <div class="hero-badges">
+        <span>10 sources interrogées</span>
+        <span>15,9 M de DPE ADEME</span>
+        <span>Street View intégré</span>
+        <span>Analyse par lien</span>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 360 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="180" cy="160" r="126" stroke="#f7f1e6" stroke-opacity=".13" stroke-width="1"/>
+        <circle cx="180" cy="160" r="94" stroke="#f7f1e6" stroke-opacity=".1" stroke-width="1"/>
+        <path d="M82 272V150L180 72L278 150V272" stroke="#f2b59f" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M132 272V190H228V272" stroke="#f7f1e6" stroke-opacity=".55" stroke-width="2"/>
+        <path d="M156 190V226H204V190" stroke="#f7f1e6" stroke-opacity=".35" stroke-width="2"/>
+        <path d="M64 272H296" stroke="#f7f1e6" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/>
+        <path d="M244 92V56H268V110" stroke="#f7f1e6" stroke-opacity=".4" stroke-width="2"/>
+        <circle cx="268" cy="115" r="5" fill="#d95d39"/>
+        <path d="M50 210C80 190 104 190 132 210" stroke="#d95d39" stroke-opacity=".6" stroke-width="2" stroke-linecap="round"/>
+        <path d="M232 210C260 190 284 190 310 210" stroke="#d95d39" stroke-opacity=".6" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <section class="search-card" aria-label="Recherche">
+    <div class="search-tabs">
+      <button class="search-tab active" data-tab="search" type="button">Rechercher un bien</button>
+      <button class="search-tab" data-tab="url" type="button">Coller un lien d'annonce</button>
+    </div>
+
+    <div id="searchPane">
+      <div class="search-main">
+        <div class="type-toggle" role="group" aria-label="Type de bien">
+          <button type="button" data-type="appartement" class="active">Appartement</button>
+          <button type="button" data-type="maison">Maison</button>
+        </div>
+        <label class="field field-city">Où ?
+          <input id="city" value="Haubourdin" placeholder="Ville, code postal…" autocomplete="off" />
+        </label>
+        <label class="field">Budget max
+          <input id="maxPrice" type="number" min="0" step="10000" value="300000" placeholder="300 000" />
+        </label>
+        <label class="field">Surface min
+          <input id="minSurface" type="number" min="0" step="5" value="30" placeholder="30" />
+        </label>
+        <button id="searchBtn" class="btn btn-primary" type="button">Rechercher</button>
+      </div>
+
+      <div class="search-sub">
+        <button id="toggleAdvancedSearch" class="linkish" type="button">+ de critères</button>
+        <button id="toggleMap" class="linkish" type="button">Rechercher sur la carte</button>
+        <div class="quick-cities" aria-label="Recherches rapides">
+          <button type="button" data-city="Haubourdin">Haubourdin</button>
+          <button type="button" data-city="Lille">Lille</button>
+          <button type="button" data-city="Tours">Tours</button>
+          <button type="button" data-dept="59">Nord (59)</button>
+        </div>
+      </div>
+
+      <div id="advancedSearch" class="advanced-search hidden">
+        <label class="field">Budget min (€)
+          <input id="minPrice" type="number" min="0" step="10000" placeholder="100 000" />
+        </label>
+        <label class="field">Surface max (m²)
+          <input id="maxSurface" type="number" min="0" step="5" placeholder="120" />
+        </label>
+        <label class="field">Pièces min
+          <input id="minRooms" type="number" min="0" max="10" step="1" placeholder="2" />
+        </label>
+        <label class="field">Pièces max
+          <input id="maxRooms" type="number" min="0" max="10" step="1" placeholder="5" />
+        </label>
+        <label class="field">DPE max
+          <select id="dpeMax">
+            <option value="">Tous</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option>
+          </select>
+        </label>
+        <label class="field">GES max
+          <select id="gesMax">
+            <option value="">Tous</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option>
+          </select>
+        </label>
+      </div>
+      <p id="status" class="search-status">Prêt à chercher. Les résultats combinent plusieurs sources.</p>
+    </div>
+
+    <div id="urlPane" class="hidden">
+      <div class="url-row">
+        <label class="field">Lien de l'annonce
+          <input id="listingUrl" placeholder="https://www.bienici.com/annonce/… ou https://www.orpi.com/annonce-vente-…" autocomplete="off" />
+        </label>
+        <button id="analyzeBtn" class="btn btn-primary" type="button">Analyser l'annonce</button>
+      </div>
+      <p class="hint">
+        Colle un lien <strong>Bien'ici, Logic-Immo, Century21, Orpi ou Immonot</strong>.
+        Valentine extrait le prix, la surface, le DPE, puis cherche l'adresse probable.
+        Les portails protégés par CAPTCHA (SeLoger, Leboncoin, PAP…) ne sont pas contournés.
+      </p>
+    </div>
+  </section>
+</header>
+
+<section id="mapPanel" class="map-panel hidden" aria-label="Sélection de zones">
+  <div class="map-head">
+    <div>
+      <h2>Chercher dans plusieurs villes</h2>
+      <p>Clique sur un département : la recherche se lance toute seule. Coche « Afficher les villes » pour affiner commune par commune.</p>
+    </div>
+    <button id="closeMap" class="btn btn-ghost" type="button">Fermer</button>
+  </div>
+  <div class="map-controls">
+    <select id="regionSelect">
+      <option value="">Toutes les régions</option>
+    </select>
+    <button id="drawZone" type="button">Dessiner une zone</button>
+    <button id="clearZone" type="button" class="hidden">Effacer la zone</button>
+    <button id="clearZones" type="button">Tout désélectionner</button>
+    <label class="switch"><input id="showCities" type="checkbox" /> Afficher les villes</label>
+    <span id="zoneCount" class="zone-count">Aucun département sélectionné</span>
+  </div>
+  <p id="drawHint" class="hint hidden">Clique sur la carte pour poser les sommets, puis clique sur « Terminer la zone ».</p>
+  <div id="map"></div>
+  <div id="zoneChips" class="chips"></div>
+  <div class="city-picker">
+    <label>Ajouter une ville
+      <input id="citySearch" placeholder="Ex. Lille, Roubaix…" autocomplete="off" />
+      <div id="cityResults" class="autocomplete hidden"></div>
+    </label>
+  </div>
+  <div id="cityChips" class="chips"></div>
+</section>
+
+<main class="page">
+  <section id="urlResult" class="url-result hidden" aria-live="polite"></section>
+
+  <section class="results-section" aria-label="Résultats">
+    <div class="results-header">
+      <div>
+        <span class="eyebrow">Sélection</span>
+        <h2 id="resultsTitle">Les biens qui vous ressemblent</h2>
+        <p id="resultsSubtitle">Lance une recherche ou colle un lien pour commencer.</p>
+      </div>
+      <div id="sourceSummary" class="source-summary"></div>
+    </div>
+
+    <div id="sourceTabs" class="source-tabs"></div>
+    <div id="citySummary" class="city-summary hidden"></div>
+
+    <div class="toolbar">
+      <div id="sortTabs" class="sort-tabs" role="group" aria-label="Trier">
+        <button type="button" data-sort="relevance" class="active">Pertinence</button>
+        <button type="button" data-sort="date_desc">Plus récentes</button>
+        <button type="button" data-sort="price_asc">Prix croissant</button>
+        <button type="button" data-sort="price_desc">Prix décroissant</button>
+        <button type="button" data-sort="surface_desc">Surface</button>
+      </div>
+      <button id="toggleFilters" class="btn btn-ghost" type="button">Tous les filtres</button>
+    </div>
+
+    <div id="quickChips" class="quick-chips">
+      <button type="button" data-quick="near">DPE récent</button>
+      <button type="button" data-quick="exact">Adresse exacte</button>
+      <button type="button" data-quick="dpeC">Bon DPE (A–C)</button>
+      <button type="button" data-quick="hideDup" class="active">Sans doublons</button>
+      <button type="button" data-quick="budget200">≤ 200 000 €</button>
+      <button type="button" data-quick="rooms3">3 pièces +</button>
+    </div>
+
+    <div id="advancedFilters" class="advanced-filters hidden">
+      <div class="advanced-grid">
+        <label class="field">Prix max (€)
+          <input id="fMaxPrice" type="number" min="0" step="10000" />
+        </label>
+        <label class="field">Surface min (m²)
+          <input id="fMinSurface" type="number" min="0" step="5" />
+        </label>
+        <label class="field">Surface max (m²)
+          <input id="fMaxSurface" type="number" min="0" step="5" />
+        </label>
+        <label class="field">Pièces min
+          <input id="fMinRooms" type="number" min="0" max="10" step="1" />
+        </label>
+        <label class="field">DPE max
+          <select id="fDpeMax">
+            <option value="">Tous</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option>
+          </select>
+        </label>
+        <label class="field">GES max
+          <select id="fGesMax">
+            <option value="">Tous</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option>
+          </select>
+        </label>
+      </div>
+      <div class="advanced-actions">
+        <label class="checkline"><input id="fExact" type="checkbox" /> Position exacte</label>
+        <label class="checkline"><input id="fNear" type="checkbox" /> DPE proche (±180 j)</label>
+        <label class="checkline"><input id="fHideDup" type="checkbox" checked /> Masquer les doublons</label>
+        <button id="resetFilters" class="btn btn-ghost" type="button" style="margin-left:auto">Réinitialiser</button>
+      </div>
+    </div>
+
+    <div id="stats" class="stats"></div>
+    <section id="results" class="results-grid"></section>
+    <div id="loadMoreWrap" class="load-more hidden">
+      <button id="loadMore" class="btn btn-ghost" type="button">Afficher plus de biens</button>
+    </div>
+  </section>
+
+  <p class="notice" style="margin-top:24px">
+    <strong>Transparence.</strong> Valentine interroge Bien'ici, Logic-Immo, Century21,
+    Orpi, Immonot et iad. Les portails protégés par CAPTCHA (SeLoger, Leboncoin, PAP,
+    Figaro, Ouest-France) ne sont pas contournés : une app publiée doit passer par un
+    agrégateur licencié ou des flux d'agences. Le DPE donne l'immeuble, pas toujours
+    l'appartement exact : vérifie toujours sur place.
+  </p>
+</main>
+
+<footer>
+  Prototype Valentine · Données DPE ADEME · Photographie et annonces appartenant à leurs éditeurs.
+  <a href="demo.html">Ouvrir l'outil DPE manuel</a>.
+  <a href="install-ios.html">Installer sur iPhone</a>.
+</footer>
+
+<div id="dpeModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Adresses probables">
+  <div class="modal-card dpe-modal-card">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Adresse probable</span>
+        <h2 id="dpeTitle">Adresses probables</h2>
+        <p id="dpeSubtitle">Le DPE donne l'immeuble ou la parcelle, pas toujours l'appartement exact.</p>
+      </div>
+      <button id="dpeClose" class="btn btn-ghost" type="button">Fermer</button>
+    </div>
+    <div id="dpeSummary" class="dpe-summary"></div>
+    <div id="dpeBody" class="dpe-body"></div>
+  </div>
+</div>
+
+<div id="svModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Street View">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Vérification</span>
+        <h2 id="svAddress">Adresse</h2>
+        <p>L'adresse reste affichée pendant la visite.</p>
+      </div>
+      <div class="url-actions" style="margin:0">
+        <a id="svOpen" class="btn btn-ghost" href="#" target="_blank" rel="noopener" style="text-decoration:none">Ouvrir dans Google Maps</a>
+        <button id="svCopy" class="btn btn-ghost" type="button">Copier l'adresse</button>
+        <button id="svClose" class="btn btn-ghost" type="button">Fermer</button>
+      </div>
+    </div>
+    <div class="sv-key-row">
+      <input id="svKey" placeholder="Clé Google Maps Embed API (optionnelle, stockée localement)" />
+      <button id="svSaveKey" class="btn btn-ghost" type="button">Enregistrer la clé</button>
+    </div>
+    <div class="sv-frame-wrap">
+      <iframe id="svFrame" class="sv-frame" src="about:blank" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Street View"></iframe>
+      <div id="svOverlay" class="sv-address-overlay"></div>
+    </div>
+    <p class="status" style="margin-top:8px">Sans clé Google Maps Embed API, l'intégration peut être vide : utilise « Ouvrir dans Google Maps ».</p>
+  </div>
+</div>
+
+<div id="sourcesModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Sources et solutions">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Sources &amp; données</span>
+        <h2>D'où viennent les annonces ?</h2>
+        <p>Ce qui est branché aujourd'hui, ce qui bloque, et les solutions propres pour aller plus loin.</p>
+      </div>
+      <div class="url-actions" style="margin:0">
+        <button id="sourcesRefresh" class="btn btn-ghost" type="button">Relancer les sources</button>
+        <button id="sourcesClose" class="btn btn-ghost" type="button">Fermer</button>
+      </div>
+    </div>
+    <div id="sourcesList" class="sources-grid"></div>
+    <div class="notice" style="margin:6px 0 16px">
+      <strong>SeLoger et Leboncoin, en mode assisté.</strong> DataDome bloque les serveurs, mais tu peux ouvrir
+      le site dans ton navigateur, passer le contrôle, puis cliquer sur le bouton de l’extension Valentine
+      « Importer cette page ». La page est lue dans ta session, pas contournée côté serveur.
+      <br><a href="https://www.seloger.com" target="_blank" rel="noopener">Ouvrir SeLoger</a>
+      · <a href="https://www.leboncoin.fr/recherche?category=9" target="_blank" rel="noopener">Ouvrir Leboncoin</a>
+      · <a href="se-loger-extension/README.md" target="_blank" rel="noopener">Installer l’extension</a>
+      · <a href="import.html" target="_blank" rel="noopener">Coller le HTML manuellement</a>
+    </div>
+    <h3 style="margin:4px 0 2px;font-family:Fraunces,Georgia,serif;font-size:1.25rem">Les solutions pour les portails bloqués</h3>
+    <ul class="solution-list">
+      <li><strong>Agrégateur licencié</strong> : Stream.estate, Melo, Ubiflow ou Netty fournissent un flux multi-portails sous contrat. C'est la voie normale pour une app publique.</li>
+      <li><strong>Flux XML d'agences et de réseaux</strong> : Century21, Orpi, Foncia, Citya, Guy Hoquet, Laforêt, Nestenn… proposent des exports partenaires.</li>
+      <li><strong>API professionnelles</strong> : SeLoger Pro (groupe Aviv), Leboncoin Pro et PAP Pro ont des canaux partenaires ; il faut un compte pro, pas du scraping.</li>
+      <li><strong>Données ouvertes</strong> : DPE ADEME, BDNB, DVF, BAN, cadastre, INSEE et RNIC enrichissent les annonces sans dépendre d'un portail.</li>
+      <li><strong>Extension navigateur</strong> : l'utilisateur peut analyser une page depuis sa propre session, sans que le serveur contourne le CAPTCHA.</li>
+    </ul>
+    <p class="notice" style="margin-top:14px">
+      <strong>Pourquoi ne pas contourner les CAPTCHA ?</strong> SeLoger, Leboncoin, PAP, Figaro et Ouest-France protègent leurs pages par DataDome, Cloudflare ou Akamai. Contourner ces protections viole leurs conditions et expose l'app à des blocages. Le prototype s'arrête donc aux sources accessibles et documente les partenariats à mettre en place.
+    </p>
+  </div>
+</div>
+
+<div id="importModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Importer SeLoger ou Leboncoin">
+  <div class="modal-card import-modal-card">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Import assisté</span>
+        <h2>Ajouter SeLoger ou Leboncoin</h2>
+        <p>Ces deux sites bloquent les robots. Valentine lit la page depuis <strong>ton</strong> navigateur, jamais depuis le serveur.</p>
+      </div>
+      <button id="importClose" class="btn btn-ghost" type="button">Fermer</button>
+    </div>
+    <ol class="import-steps">
+      <li><strong>Ouvre le site</strong> dans un onglet et fais ta recherche normalement.</li>
+      <li><strong>Clique sur « Importer cette page »</strong> avec l’extension, ou sur le <strong>favori magique</strong> de la page d’import (aucun code à copier).</li>
+      <li><strong>Reviens ici et relance la recherche</strong> : les annonces apparaissent sous la source SeLoger ou Leboncoin, avec les autres.</li>
+    </ol>
+    <div class="import-grid">
+      <div class="import-card">
+        <span class="import-logo">SL</span>
+        <h3>SeLoger</h3>
+        <p id="importSeLogerState">Aucune annonce SeLoger importée pour l’instant.</p>
+        <div class="import-actions">
+          <a class="btn btn-primary" href="https://www.seloger.com" target="_blank" rel="noopener">Ouvrir SeLoger</a>
+          <a class="btn btn-ghost" href="import.html?source=seloger" target="_blank" rel="noopener">Coller le HTML</a>
+        </div>
+      </div>
+      <div class="import-card">
+        <span class="import-logo">LBC</span>
+        <h3>Leboncoin</h3>
+        <p id="importLeboncoinState">Aucune annonce Leboncoin importée pour l’instant.</p>
+        <div class="import-actions">
+          <a class="btn btn-primary" href="https://www.leboncoin.fr/recherche?category=9" target="_blank" rel="noopener">Ouvrir Leboncoin</a>
+          <a class="btn btn-ghost" href="import.html?source=leboncoin" target="_blank" rel="noopener">Coller le HTML</a>
+        </div>
+      </div>
+    </div>
+    <div class="import-help">
+      <p><strong>Le plus simple : le favori magique.</strong> Ouvre la page d’import, glisse le bouton orange dans ta barre de favoris, puis clique dessus sur SeLoger ou Leboncoin. Aucun code à copier.</p>
+      <p><strong>Ou l’extension :</strong> Chrome / Edge → <code>chrome://extensions</code> → active <strong>Mode développeur</strong> → <strong>Charger l’extension non empaquetée</strong> → dossier <code>se-loger-extension</code>.</p>
+      <p>Dans les deux cas, la page est lue dans ton navigateur, après ton contrôle. Aucun CAPTCHA n’est contourné côté serveur.</p>
+      <a href="import.html" target="_blank" rel="noopener">Ouvrir la page d’import (favori magique)</a>
+      · <a href="se-loger-extension/README.md" target="_blank" rel="noopener">Guide de l’extension</a>
+    </div>
+    <div class="import-footer">
+      <button id="importRefresh" class="btn btn-ghost" type="button">Actualiser</button>
+      <a class="btn btn-ghost" href="import.html" target="_blank" rel="noopener" style="text-decoration:none">Page d’import</a>
+      <button id="importView" class="btn btn-primary" type="button">Voir les biens importés</button>
+    </div>
+  </div>
+</div>
+
+<button id="assistantBtn" class="ai-fab" type="button" aria-label="Ouvrir l’assistant IA">
+  <span aria-hidden="true">✦</span> Assistant IA
+</button>
+<section id="assistantPanel" class="ai-panel" aria-label="Assistant IA Valentine">
+  <header class="ai-head">
+    <div>
+      <strong>Assistant Valentine</strong>
+      <span id="aiModelLabel">Mode local · sans clé API</span>
+    </div>
+    <div class="ai-head-actions">
+      <button id="aiSettingsBtn" type="button" title="Réglages IA" aria-label="Réglages IA">⚙</button>
+      <button id="aiClose" type="button" title="Fermer" aria-label="Fermer">×</button>
+    </div>
+  </header>
+  <div id="aiMessages" class="ai-messages"></div>
+  <div id="aiSuggestions" class="ai-suggestions">
+    <button type="button" data-ai-prompt="Cherche une maison à Lille sous 250 000 € avec 3 chambres">Maison à Lille ≤ 250 k€</button>
+    <button type="button" data-ai-prompt="Sélectionne les villes dans un rayon de 10 km autour de Haubourdin">Zone 10 km Haubourdin</button>
+    <button type="button" data-ai-prompt="Quels sont les meilleurs DPE dans les résultats ?">Meilleurs DPE</button>
+    <button type="button" data-ai-prompt="Compare le prix au m² des résultats">Prix au m²</button>
+    <button type="button" data-ai-prompt="Montre-moi les annonces SeLoger">Filtre SeLoger</button>
+  </div>
+  <form id="aiForm" class="ai-form">
+    <textarea id="aiInput" rows="2" placeholder="Ex. Cherche un appartement à Roubaix sous 200 000 €, 2 pièces minimum…"></textarea>
+    <button id="aiSend" type="submit">Envoyer</button>
+  </form>
+  <div id="aiSettings" class="ai-settings hidden">
+    <div class="modal-head" style="margin-bottom:2px">
+      <div>
+        <span class="eyebrow">Réglages</span>
+        <h3>Connecter une IA</h3>
+      </div>
+      <button id="aiSettingsClose" class="btn btn-ghost" type="button">Retour</button>
+    </div>
+    <label class="field">Fournisseur
+      <select id="aiProvider">
+        <option value="openai">OpenAI</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="mistral">Mistral</option>
+        <option value="groq">Groq</option>
+        <option value="ollama">Ollama (local)</option>
+        <option value="custom">Personnalisé (compatible OpenAI)</option>
+      </select>
+    </label>
+    <label class="field">URL de l’API
+      <input id="aiBase" placeholder="https://api.openai.com/v1" autocomplete="off" />
+    </label>
+    <label class="field">Modèle
+      <input id="aiModel" placeholder="gpt-4o-mini" autocomplete="off" />
+    </label>
+    <label class="field">Clé API
+      <input id="aiKey" type="password" placeholder="sk-…" autocomplete="off" />
+    </label>
+    <p class="ai-note">La clé est stockée uniquement dans ce navigateur (localStorage). Elle part directement vers le fournisseur choisi, jamais vers le serveur Valentine.</p>
+    <div class="ai-settings-actions">
+      <button id="aiSave" type="button">Enregistrer</button>
+      <button id="aiClear" type="button" class="ghost">Effacer la clé</button>
+    </div>
+    <p id="aiSettingsStatus" class="status"></p>
+    <p class="ai-note"><strong>Sans clé</strong>, l’assistant fonctionne en mode local : il comprend les recherches, les zones, les filtres et les tris les plus courants. Avec une clé, il dialogue et enchaîne plusieurs actions.</p>
+  </div>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const API = (() => {
+    if (typeof window.VALENTINE_API === 'string') return window.VALENTINE_API.replace(/\/$/, '');
+    try {
+      const saved = localStorage.getItem('valentine.apiBase');
+      if (saved !== null) return saved.replace(/\/$/, '');
+    } catch (e) { /* stockage indisponible */ }
+    // En local, l’API tourne sur le port 8766. En production, on suppose un
+    // reverse proxy : /api est servi sur la même origine que le site.
+    if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+      return `${location.protocol}//${location.hostname}:8766`;
+    }
+    return '';
+  })();
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  const fmtPrice = (n) => n ? `${Math.round(n).toLocaleString('fr-FR')} €` : 'Prix ?';
+  const fmtSurface = (n) => n ? `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m²` : 'Surface ?';
+  const fmtNum = (n) => n ? Math.round(n).toLocaleString('fr-FR') : '';
+
+  function parseDate(s) {
+    if (!s) return null;
+    const d = new Date(String(s).slice(0, 10));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function formatDate(s) {
+    const d = parseDate(s);
+    return d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+  }
+  function daysBetween(a, b) {
+    const da = parseDate(a);
+    const db = parseDate(b);
+    return da && db ? Math.round((da - db) / 86400000) : null;
+  }
+  function debounce(fn, ms = 250) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+  function dpeColor(letter) {
+    return {
+      A: '#1a9850', B: '#66bd63', C: '#a6d96a', D: '#fee08b',
+      E: '#fdae61', F: '#f46d43', G: '#d73027'
+    }[letter] || '#8899a6';
+  }
+  function scoreClass(score) {
+    return score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low';
+  }
+  function scoreLabel(score) {
+    if (score >= 80) return 'Très probable';
+    if (score >= 65) return 'Probable';
+    if (score >= 50) return 'Possible';
+    return 'Faible';
+  }
+  function sourceKey(name) {
+    const n = String(name || '').toLowerCase();
+    if (n.includes('bien')) return 'bienici';
+    if (n.includes('logic')) return 'logic';
+    if (n.includes('century') || n === 'c21') return 'c21';
+    if (n.includes('orpi')) return 'orpi';
+    if (n.includes('immonot')) return 'immonot';
+    if (n.includes('iad')) return 'iad';
+    if (n.includes('citya')) return 'citya';
+    if (n.includes('paruvendu')) return 'paruvendu';
+    if (n.includes('nestenn')) return 'nestenn';
+    if (n.includes('laforet') || n.includes('laforêt')) return 'laforet';
+    if (n.includes('seloger') || n.includes('se loger')) return 'seloger';
+    return 'other';
+  }
+  function sourceBadge(name) {
+    const key = sourceKey(name);
+    return `<span class="src-badge src-${key}">${esc(name || 'Source')}</span>`;
+  }
+  function setStatus(msg, cls) {
+    const el = $('status');
+    el.textContent = msg;
+    el.className = 'search-status' + (cls ? ` ${cls}` : '');
+  }
+
+  function streetViewUrl(lat, lon, address) {
+    const q = address ? encodeURIComponent(address) : '';
+    return `https://www.google.com/maps?q=${q}&layer=c&cbll=${lat},${lon}`;
+  }
+  function satelliteUrl(lat, lon) {
+    return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z/data=!3m1!1e3`;
+  }
+  function observatoryUrl(num) {
+    return `https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${encodeURIComponent(num)}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+  let currentType = 'appartement';
+  let currentListings = [];
+  let currentFiltered = [];
+  let currentSort = 'relevance';
+  let currentSource = 'all';
+  let visibleCount = 24;
+  let searchSeq = 0;
+  let lastSearchLabel = '';
+  let lastSources = [];
+  let lastCityCounts = {};
+  let importCounts = {};
+  let importTotalSeen = null;
+  let pendingSourceFilter = null;
+  let currentSv = null;
+  let currentUrlResult = null;
+  let mapInitialized = false;
+
+  function byDateDesc(rows) {
+    return rows.slice().sort((a, b) => {
+      const da = parseDate(b.publication_date || b.modification_date || b.listing_date);
+      const db = parseDate(a.publication_date || a.modification_date || a.listing_date);
+      return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+    });
+  }
+
+  function sortRows(rows) {
+    if (currentSort === 'price_asc') rows.sort((a, b) => (a.price || 1e12) - (b.price || 1e12));
+    else if (currentSort === 'price_desc') rows.sort((a, b) => (b.price || 0) - (a.price || 0));
+    else if (currentSort === 'surface_desc') rows.sort((a, b) => (b.surface || 0) - (a.surface || 0));
+    else if (currentSort === 'date_desc') rows = byDateDesc(rows);
+    else if (currentSort === 'relevance') {
+      // Mélange les sources : une carte de chaque source à tour de rôle.
+      // Les annonces datées passent d'abord à l'intérieur de chaque source.
+      const groups = new Map();
+      for (const r of rows) {
+        const s = r.source || 'Source';
+        if (!groups.has(s)) groups.set(s, []);
+        groups.get(s).push(r);
+      }
+      const buckets = [...groups.values()].map((g) => byDateDesc(g));
+      const mixed = [];
+      let index = 0;
+      while (mixed.length < rows.length) {
+        let added = false;
+        for (const bucket of buckets) {
+          if (bucket[index]) {
+            mixed.push(bucket[index]);
+            added = true;
+          }
+        }
+        if (!added) break;
+        index += 1;
+      }
+      rows = mixed;
+    }
+    return rows;
+  }
+
+  function textOfListing(l) {
+    return `${l.title || ''} ${l.description || ''}`;
+  }
+
+  function normalizeWords(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function tokenSet(value) {
+    const stop = new Set([
+      'dans', 'avec', 'pour', 'cette', 'vous', 'votre', 'notre', 'maison',
+      'appartement', 'vente', 'vendre', 'proche', 'secteur', 'quartier',
+      'bien', 'très', 'tres', 'tout', 'tous', 'toute', 'toutes', 'plus',
+      'situé', 'situe', 'située', 'situee', 'offre', 'propose', 'agence',
+      'honoraires', 'charge', 'vendeur', 'comprenant', 'comprend',
+    ]);
+    return new Set(
+      normalizeWords(value).split(' ').filter((w) => w.length >= 4 && !stop.has(w))
+    );
+  }
+
+  function textSimilarity(a, b) {
+    const ta = tokenSet(textOfListing(a));
+    const tb = tokenSet(textOfListing(b));
+    if (!ta.size || !tb.size) return 0;
+    let inter = 0;
+    for (const w of ta) if (tb.has(w)) inter += 1;
+    return inter / (ta.size + tb.size - inter);
+  }
+
+  function mergeListingInto(existing, incoming) {
+    const sources = new Set([
+      ...(existing.sources || [existing.source]).filter(Boolean),
+      ...(incoming.sources || [incoming.source]).filter(Boolean),
+    ]);
+    existing.sources = [...sources];
+    existing.source_count = sources.size;
+    existing.duplicate_count = (existing.duplicate_count || 1) + 1;
+    for (const field of ['dpe', 'ges', 'dpe_date', 'publication_date', 'description', 'district', 'postal_code', 'bedrooms']) {
+      if (!existing[field] && incoming[field]) existing[field] = incoming[field];
+    }
+    if (!existing.photos?.length && incoming.photos?.length) existing.photos = incoming.photos;
+  }
+
+  function isNearDuplicate(a, b) {
+    if (!a.price || !b.price || !a.surface || !b.surface) return false;
+    if (normalizeWords(a.city) !== normalizeWords(b.city)) return false;
+    if ((a.type || '') !== (b.type || '')) return false;
+    if (Math.abs(a.price - b.price) > Math.max(1000, a.price * 0.01)) return false;
+    if (Math.abs(a.surface - b.surface) > Math.max(1.5, a.surface * 0.02)) return false;
+    if (a.rooms && b.rooms && a.rooms !== b.rooms) return false;
+    if (a.bedrooms && b.bedrooms && a.bedrooms !== b.bedrooms) return false;
+    if (a.district && b.district && normalizeWords(a.district) !== normalizeWords(b.district)) return false;
+
+    const similarity = textSimilarity(a, b);
+    if (similarity >= 0.5) return true;
+
+    // Même prix et même surface : très probablement le même bien, surtout
+    // pour une maison. Pour les appartements, on reste plus prudent.
+    const samePrice = Math.abs(a.price - b.price) <= 500;
+    const sameSurface = Math.abs(a.surface - b.surface) <= 1.0;
+    if (!samePrice || !sameSurface) return false;
+    if ((a.type || '') === 'maison') return true;
+    return similarity >= 0.35;
+  }
+
+  function dedupeListings(rows) {
+    const seen = new Map();
+    const out = [];
+    const nearBuckets = new Map();
+    for (const l of rows) {
+      const photo = (l.photos && l.photos[0]) || '';
+      const desc = (l.description || '').replace(/\s+/g, ' ').slice(0, 160);
+      const key = photo
+        ? `photo:${photo}`
+        : `meta:${l.city}|${Math.round(l.surface || 0)}|${l.rooms || 0}|${Math.round((l.price || 0) / 1000)}|${desc}`;
+      if (seen.has(key)) {
+        mergeListingInto(seen.get(key), l);
+        continue;
+      }
+
+      const cityKey = `${normalizeWords(l.city)}|${l.type || ''}`;
+      const bucket = Number(l.price) ? Math.round(l.price / 1000) : null;
+      let near = null;
+      if (bucket !== null) {
+        for (const delta of [-1, 0, 1]) {
+          const list = nearBuckets.get(`${cityKey}|${bucket + delta}`) || [];
+          near = list.find((candidate) => isNearDuplicate(candidate, l)) || null;
+          if (near) break;
+        }
+      }
+      if (near) {
+        mergeListingInto(near, l);
+        continue;
+      }
+
+      const copy = { ...l, duplicate_count: Math.max(1, l.duplicate_count || 1) };
+      seen.set(key, copy);
+      out.push(copy);
+      if (bucket !== null) {
+        const bkey = `${cityKey}|${bucket}`;
+        if (!nearBuckets.has(bkey)) nearBuckets.set(bkey, []);
+        nearBuckets.get(bkey).push(copy);
+      }
+    }
+    return out;
+  }
+
+  function buildFiltered() {
+    if (!currentListings.length) return [];
+    const maxPrice = Number($('fMaxPrice').value) || null;
+    const minSurface = Number($('fMinSurface').value) || null;
+    const maxSurface = Number($('fMaxSurface').value) || null;
+    const minRooms = Number($('fMinRooms').value) || null;
+    const dpeMax = $('fDpeMax').value || null;
+    const gesMax = $('fGesMax').value || null;
+    const exact = $('fExact').checked;
+    const near = $('fNear').checked;
+    const hideDup = $('fHideDup').checked;
+
+    let rows = currentListings.slice();
+    if (currentSource === '__imported__') {
+      rows = rows.filter((l) => {
+        const names = (l.sources && l.sources.length) ? l.sources : [l.source];
+        return names.some((n) => n === 'SeLoger' || n === 'Leboncoin');
+      });
+    } else if (currentSource !== 'all') {
+      rows = rows.filter((l) => {
+        const names = (l.sources && l.sources.length) ? l.sources : [l.source];
+        return names.includes(currentSource);
+      });
+    }
+    if (maxPrice) rows = rows.filter((l) => !l.price || l.price <= maxPrice);
+    if (minSurface) rows = rows.filter((l) => l.surface && l.surface >= minSurface);
+    if (maxSurface) rows = rows.filter((l) => l.surface && l.surface <= maxSurface);
+    if (minRooms) rows = rows.filter((l) => l.rooms && l.rooms >= minRooms);
+    if (dpeMax) rows = rows.filter((l) => l.dpe && 'ABCDEFG'.indexOf(l.dpe) <= 'ABCDEFG'.indexOf(dpeMax));
+    if (gesMax) rows = rows.filter((l) => l.ges && 'ABCDEFG'.indexOf(l.ges) <= 'ABCDEFG'.indexOf(gesMax));
+    if (exact) rows = rows.filter((l) => l.blur_type === 'exact');
+    if (near) {
+      rows = rows.filter((l) => {
+        const gap = daysBetween(l.dpe_date, l.publication_date || l.modification_date);
+        return gap !== null && Math.abs(gap) <= 180;
+      });
+    }
+    const beforeDedup = rows.length;
+    if (hideDup) rows = dedupeListings(rows);
+    const hiddenDup = beforeDedup - rows.length;
+    rows = sortRows(rows);
+    return { rows, hiddenDup };
+  }
+
+  function updateQuickChips() {
+    const setActive = (key, active) => {
+      const b = document.querySelector(`[data-quick="${key}"]`);
+      if (b) b.classList.toggle('active', !!active);
+    };
+    setActive('near', $('fNear').checked);
+    setActive('exact', $('fExact').checked);
+    setActive('dpeC', $('fDpeMax').value === 'C');
+    setActive('hideDup', $('fHideDup').checked);
+    setActive('budget200', $('fMaxPrice').value === '200000');
+    setActive('rooms3', $('fMinRooms').value === '3');
+  }
+
+  function updateSortButtons() {
+    document.querySelectorAll('#sortTabs button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.sort === currentSort);
+    });
+  }
+
+  function sourceCounts() {
+    const counts = new Map();
+    for (const l of currentListings) {
+      const names = (l.sources && l.sources.length) ? l.sources : [l.source];
+      for (const s of names) {
+        if (s) counts.set(s, (counts.get(s) || 0) + 1);
+      }
+    }
+    return counts;
+  }
+
+  function updateSourceTabs() {
+    const counts = sourceCounts();
+    const parts = [`<button type="button" class="source-tab ${currentSource === 'all' ? 'active' : ''}" data-source="all"><span class="dot"></span>Toutes <b>${currentListings.length}</b></button>`];
+    const importedVisible = currentListings.filter((l) => {
+      const names = (l.sources && l.sources.length) ? l.sources : [l.source];
+      return names.some((n) => n === 'SeLoger' || n === 'Leboncoin');
+    }).length;
+    if (importedVisible) {
+      parts.push(`<button type="button" class="source-tab ${currentSource === '__imported__' ? 'active' : ''}" data-source="__imported__"><span class="dot"></span>Importées <b>${importedVisible}</b></button>`);
+    }
+    for (const [name, count] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+      parts.push(`<button type="button" class="source-tab ${currentSource === name ? 'active' : ''}" data-source="${esc(name)}"><span class="dot"></span>${esc(name)} <b>${count}</b></button>`);
+    }
+    if (lastSources.length) {
+      for (const name of ['SeLoger', 'Leboncoin']) {
+        if (!counts.has(name)) {
+          parts.push(`<button type="button" class="source-tab src-import-tab" data-import-source="${esc(name)}">＋ ${esc(name)} · importer</button>`);
+        }
+      }
+    }
+    $('sourceTabs').innerHTML = parts.join('');
+  }
+
+  function updateSourceSummary() {
+    if (!lastSources.length) {
+      $('sourceSummary').innerHTML = '';
+      return;
+    }
+    const counts = sourceCounts();
+    const names = lastSources.map((s) => s.name);
+    const contributing = names.filter((name) => (counts.get(name) || 0) > 0);
+    const hasPolygon = !!(searchPolygon && searchPolygon.length >= 3);
+    const hiddenSources = lastSources.length - contributing.length;
+    const chips = contributing
+      .map((name) => `<span class="src-score">${sourceBadge(name)}<span class="total">${counts.get(name)}</span></span>`)
+      .join('')
+      + ['SeLoger', 'Leboncoin']
+        .filter((name) => !counts.has(name))
+        .map((name) => `<button type="button" class="src-import-chip" data-import-source="${esc(name)}">＋ ${esc(name)}</button>`)
+        .join('');
+    const label = hasPolygon
+      ? `${contributing.length} source${contributing.length > 1 ? 's' : ''} dans la zone · ${currentListings.length} bien${currentListings.length > 1 ? 's' : ''}`
+      : `${lastSources.length} sources interrogées · ${currentListings.length} biens uniques`;
+    const hiddenNote = hasPolygon && hiddenSources > 0
+      ? `<span class="total">${hiddenSources} source${hiddenSources > 1 ? 's' : ''} sans ville/coordonnées masquée${hiddenSources > 1 ? 's' : ''}</span>`
+      : '';
+    $('sourceSummary').innerHTML = `<span class="total">${label}</span>${hiddenNote}<div class="source-chips">${chips}</div>`;
+  }
+
+  function updateCitySummary(rows) {
+    const counts = new Map();
+    for (const row of rows) {
+      if (!row.city) continue;
+      counts.set(row.city, (counts.get(row.city) || 0) + 1);
+    }
+    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const el = $('citySummary');
+    if (entries.length <= 1) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+    const shown = entries.slice(0, 10);
+    const more = entries.length - shown.length;
+    const typed = ($('city').value || '').trim().toLowerCase();
+    el.innerHTML = '<span class="city-label">Villes</span>' + shown.map(([name, count]) => {
+      const highlight = name.trim().toLowerCase() === typed ? ' style="border-color:#d95d39;background:#fbe7df"' : '';
+      return `<span class="city-chip"${highlight}>${esc(name)}<b>${count}</b></span>`;
+    }).join('') + (more > 0 ? `<span class="city-chip">+${more} villes</span>` : '');
+    el.classList.remove('hidden');
+  }
+
+  function renderResults() {
+    if (!currentFiltered.length) {
+      $('results').innerHTML = '';
+      $('loadMoreWrap').classList.add('hidden');
+      return;
+    }
+    const rows = currentFiltered.slice(0, visibleCount);
+    $('results').innerHTML = rows.map((l, i) => listingHtml(l, i)).join('');
+    $('loadMoreWrap').classList.toggle('hidden', visibleCount >= currentFiltered.length);
+  }
+
+  function applyFiltersToResults() {
+    if (!currentListings.length) return;
+    const { rows, hiddenDup } = buildFiltered();
+    currentFiltered = rows;
+    updateCitySummary(rows);
+    renderResults();
+    updateQuickChips();
+
+    const dated = rows.filter((l) => l.dpe_date && (l.publication_date || l.modification_date));
+    const nearCount = dated.filter((l) => {
+      const gap = daysBetween(l.dpe_date, l.publication_date || l.modification_date);
+      return gap !== null && Math.abs(gap) <= 180;
+    }).length;
+    const parts = [];
+    if (dated.length) {
+      parts.push(`DPE proche de l'annonce (±180 j) : ${nearCount}/${dated.length} (${Math.round(100 * nearCount / dated.length)} %)`);
+    }
+    if (hiddenDup > 0) parts.push(`${hiddenDup} doublon${hiddenDup > 1 ? 's' : ''} masqué${hiddenDup > 1 ? 's' : ''}`);
+    if (rows.length) parts.push(`${rows.length} bien${rows.length > 1 ? 's' : ''} dans la sélection`);
+    $('stats').textContent = parts.join(' · ');
+    const countLabel = currentSource === '__imported__'
+      ? `${rows.length} bien${rows.length > 1 ? 's' : ''} importé${rows.length > 1 ? 's' : ''}`
+      : currentSource !== 'all'
+        ? `${rows.length} bien${rows.length > 1 ? 's' : ''} ${currentSource}`
+        : rows.length === currentListings.length
+          ? `${rows.length} bien${rows.length > 1 ? 's' : ''}`
+          : `${rows.length} / ${currentListings.length} biens après filtres`;
+    const where = lastSearchLabel || 'dans cette recherche';
+    $('resultsTitle').textContent = rows.length
+      ? `${countLabel} ${where}`
+      : `Aucun bien ${where}`;
+    $('resultsSubtitle').textContent = rows.length
+      ? 'Clique sur « Trouver l’adresse » pour croiser l’annonce avec les DPE ADEME.'
+      : 'Élargis les critères, change de source ou relance une recherche.';
+    $('loadMoreWrap').classList.toggle('hidden', visibleCount >= rows.length);
+
+    const empty = document.getElementById('emptyState');
+    if (!rows.length) {
+      $('results').innerHTML = `<div class="empty"><strong>Rien ne correspond encore.</strong>Élargis le budget, la surface ou décoche un filtre.</div>`;
+    }
+    updateQuickChips();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cards
+  // ---------------------------------------------------------------------------
+  function listingHtml(l, idx) {
+    const kind = l.type === 'maison' ? 'Maison' : 'Appartement';
+    const title = l.title || `${kind}${l.rooms ? ` ${l.rooms} pièces` : ''} — ${l.city || ''}`;
+    const photos = l.photos || [];
+    const photo = photos[0]
+      ? `<img class="listing-photo" src="${esc(photos[0])}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="photo-placeholder" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></div>`
+      : `<div class="photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></div>`;
+    const sources = (l.sources && l.sources.length ? l.sources : [l.source]).filter(Boolean);
+    const sourceStack = sources.slice(0, 2).map(sourceBadge).join('') + (sources.length > 2 ? `<span class="src-badge">+${sources.length - 2}</span>` : '');
+    const dpe = l.dpe ? `<span class="dpe-chip" style="background:${dpeColor(l.dpe)}" title="DPE ${esc(l.dpe)}">${esc(l.dpe)}</span>` : '';
+    const energyParts = [];
+    if (l.dpe) energyParts.push(`DPE ${l.dpe}`);
+    if (l.ges) energyParts.push(`GES ${l.ges}`);
+    const energy = energyParts.length
+      ? `<span class="energy" style="background:${dpeColor(l.dpe || l.ges)}33">${energyParts.join(' · ')}</span>`
+      : '';
+    const rawDate = l.publication_date || l.modification_date || l.listing_date;
+    const dateLabel = l.listing_date_kind === 'publication' ? 'Publiée' : 'Mise à jour';
+    const pub = formatDate(rawDate);
+    const gap = daysBetween(l.dpe_date, rawDate);
+    const gapPill = gap !== null
+      ? (Math.abs(gap) <= 365
+        ? `<span class="gap-pill ${Math.abs(gap) <= 180 ? 'near' : ''}">${gap < 0 ? `DPE ${Math.abs(gap)} j avant` : `DPE ${gap} j après`}</span>`
+        : '<span class="gap-pill">DPE ancien</span>')
+      : '';
+    const loc = l.position_approx
+      ? '<span class="tag" title="Le bien est dans une ville dont le centre est dans la zone, mais sa position exacte n’est pas publiée.">Position approx. (ville)</span>'
+      : l.blur_type === 'exact'
+        ? '<span class="tag exact">Adresse exacte</span>'
+        : l.address_known
+          ? '<span class="tag">Adresse communiquée</span>'
+          : '<span class="tag">Adresse à retrouver</span>';
+    const dup = (l.duplicate_count || 1) > 1
+      ? `<span class="tag duplicate">${l.duplicate_count} doublons fusionnés</span>`
+      : (l.source_count || 1) > 1
+        ? `<span class="tag duplicate">${l.source_count} sources</span>`
+        : '';
+    const district = l.district ? ` · ${esc(l.district)}` : '';
+    const desc = l.description ? `<p class="listing-desc">${esc(l.description)}</p>` : '';
+    const features = [
+      l.surface ? `<span class="feature">${fmtSurface(l.surface)}</span>` : '',
+      l.rooms ? `<span class="feature">${l.rooms} pièce${l.rooms > 1 ? 's' : ''}</span>` : '',
+      l.bedrooms ? `<span class="feature">${l.bedrooms} chambre${l.bedrooms > 1 ? 's' : ''}</span>` : '',
+    ].filter(Boolean).join('');
+    return `<article class="listing" data-idx="${idx}">
+      <div class="listing-media">
+        ${photo}
+        <div class="media-badges">
+          <div class="src-stack">${sourceStack}</div>
+          <div>${dpe}</div>
+        </div>
+      </div>
+      <div class="listing-body">
+        <div class="listing-topline">
+          <div class="price">${fmtPrice(l.price)}</div>
+          <div class="date-label">${pub ? `${dateLabel}<br>${esc(pub)}` : 'Date non communiquée'}</div>
+        </div>
+        <h2>${esc(title)}</h2>
+        <div class="location-line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.4 7-12a7 7 0 1 0-14 0c0 6.6 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+          ${esc(l.city || '')}${l.postal_code ? ` (${esc(l.postal_code)})` : ''}${district}
+        </div>
+        <div class="features">${features}</div>
+        <div class="energy-row">
+          ${energy}${gapPill}${loc}${dup}
+        </div>
+        ${desc}
+        <div class="listing-footer">
+          <button class="btn btn-soft js-resolve" data-idx="${idx}" type="button">${l.blur_type === 'exact' ? "Voir l'adresse" : "Trouver l'adresse"}</button>
+          <a href="${esc(l.url || '#')}" target="_blank" rel="noopener">Voir l'annonce ↗</a>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function candidateHtml(c) {
+    const links = [];
+    if (c.lat != null && c.lon != null) {
+      links.push(`<a href="#" class="js-sv" data-lat="${c.lat}" data-lon="${c.lon}" data-address="${esc(c.address || '')}">Street View</a>`);
+      links.push(`<a href="${satelliteUrl(c.lat, c.lon)}" target="_blank" rel="noopener">Satellite</a>`);
+    }
+    if (c.numero_dpe) {
+      links.push(`<a href="${observatoryUrl(c.numero_dpe)}" target="_blank" rel="noopener">Fiche DPE</a>`);
+    }
+    const noisy = new Set([
+      'type de bien', 'année de construction', 'chauffage',
+      c.dpe ? `DPE ${c.dpe}` : '', c.ges ? `GES ${c.ges}` : ''
+    ]);
+    const reasons = (c.reasons || [])
+      .map((r) => String(r).trim())
+      .filter((r) => r && !noisy.has(r));
+    const reasonText = reasons.slice(0, 2).join(' · ');
+    return `<div class="candidate">
+      <div class="score ${scoreClass(c.score)}">${c.score}<small>${scoreLabel(c.score)}</small></div>
+      <div class="candidate-body">
+        <div class="candidate-top">
+          <strong>${esc(c.address || 'Adresse non renseignée')}</strong>
+          ${c.distance_m != null && c.distance_m > 0 ? `<span class="candidate-distance">à ${Math.round(c.distance_m)} m</span>` : ''}
+        </div>
+        <div class="candidate-meta">
+          ${c.surface ? `<span>${fmtSurface(c.surface)}</span>` : ''}
+          ${c.dpe ? `<span>DPE ${esc(c.dpe)}</span>` : ''}
+          ${c.ges ? `<span>GES ${esc(c.ges)}</span>` : ''}
+          ${c.date ? `<span>DPE du ${esc(formatDate(c.date))}</span>` : ''}
+          ${c.dpe_count > 1 ? `<span>${c.dpe_count} DPE</span>` : ''}
+          ${c.dpe_near_listing ? '<span>DPE proche</span>' : ''}
+        </div>
+        <p class="candidate-reason">${esc(reasonText || 'Correspondance globale avec l’annonce.')}</p>
+        ${links.length ? `<div class="candidate-links">${links.join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Search
+  // ---------------------------------------------------------------------------
+  function searchParams() {
+    const params = new URLSearchParams({
+      type: currentType,
+      max_price: $('maxPrice').value || '',
+      min_price: $('minPrice').value || '',
+      min_surface: $('minSurface').value || '',
+      max_surface: $('maxSurface').value || '',
+      min_rooms: $('minRooms').value || '',
+      max_rooms: $('maxRooms').value || '',
+      dpe_max: $('dpeMax').value || '',
+      ges_max: $('gesMax').value || ''
+    });
+    if (selectedCities.size) {
+      const list = [...selectedCities];
+      const typed = ($('city').value || '').trim().toLowerCase();
+      const idx = list.findIndex((n) => n.trim().toLowerCase() === typed);
+      // La ville saisie passe en premier : les sources HTML limitées aux
+      // premières villes incluent ainsi le secteur que l'utilisateur regarde.
+      if (idx > 0) list.unshift(list.splice(idx, 1)[0]);
+      params.set('cities', list.join(','));
+    }
+    if (selectedDepts.size) params.set('departments', [...selectedDepts].join(','));
+    if (searchPolygon && searchPolygon.length >= 3) {
+      params.set('polygon', searchPolygon.map((p) => `${p[0]},${p[1]}`).join('|'));
+    }
+    if (!selectedCities.size && !selectedDepts.size && !searchPolygon) {
+      params.set('city', $('city').value.trim());
+    }
+    return params;
+  }
+
+  async function search() {
+    const city = $('city').value.trim();
+    updateZoneUI();
+    if (zoneMap && city && !selectedDepts.size && !selectedCities.size && !searchPolygon) {
+      focusCityOnMap(city);
+    }
+    const hasPolygon = !!(searchPolygon && searchPolygon.length >= 3);
+    const hasDrawnZone = !!(zoneShape || assistantCircle) && selectedCities.size > 0;
+    const hasZone = selectedCities.size > 0 || selectedDepts.size > 0 || hasPolygon || hasDrawnZone;
+    if (!city && !hasZone) {
+      setStatus('Indique une ville ou dessine une zone sur la carte.', 'error');
+      $('city').focus();
+      return;
+    }
+    const seq = ++searchSeq;
+    const params = searchParams();
+    const zoneLabel = hasDrawnZone
+      ? `la zone (${selectedCities.size} ville${selectedCities.size > 1 ? 's' : ''})`
+      : hasPolygon
+        ? 'la zone dessinée'
+        : selectedCities.size
+          ? `${selectedCities.size} ville${selectedCities.size > 1 ? 's' : ''}`
+          : selectedDepts.size
+            ? `${selectedDepts.size} département${selectedDepts.size > 1 ? 's' : ''}`
+            : city;
+    lastSearchLabel = hasZone ? `dans ${zoneLabel}` : `à ${city}`;
+    setStatus(`Recherche dans ${zoneLabel}…`, '');
+    $('resultsTitle').textContent = 'Recherche en cours…';
+    $('resultsSubtitle').textContent = 'Valentine interroge les sources et rapproche les annonces.';
+    $('stats').textContent = '';
+    $('urlResult').classList.add('hidden');
+    currentListings = [];
+    currentFiltered = [];
+    lastCityCounts = {};
+    $('citySummary').classList.add('hidden');
+    $('citySummary').innerHTML = '';
+    $('sourceTabs').innerHTML = '';
+    $('sourceSummary').innerHTML = '';
+    $('loadMoreWrap').classList.add('hidden');
+    $('results').innerHTML = '<div class="skeleton"><div class="sk-card"></div><div class="sk-card"></div></div>';
+    try {
+      const r = await fetch(`${API}/api/listings?${params.toString()}`);
+      if (seq !== searchSeq) return;
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      currentListings = j.listings || [];
+      lastSources = j.sources || [];
+      lastCityCounts = j.city_counts || {};
+      if (!currentListings.length) {
+        $('results').innerHTML = `<div class="empty"><strong>Aucun bien trouvé.</strong>Essaie une ville plus large, un autre type ou augmente le budget.</div>`;
+        $('resultsTitle').textContent = 'Aucun bien trouvé';
+        $('resultsSubtitle').textContent = 'Les sources accessibles ont été interrogées.';
+        $('sourceSummary').innerHTML = lastSources.map((s) => `<span class="total">${esc(s.name)} ${s.count}</span>`).join('');
+        setStatus('0 annonce. Élargis les critères.', 'error');
+        return;
+      }
+      $('fMaxPrice').value = $('maxPrice').value || '';
+      $('fMinSurface').value = $('minSurface').value || '';
+      $('fMaxSurface').value = $('maxSurface').value || '';
+      $('fMinRooms').value = $('minRooms').value || '';
+      $('fDpeMax').value = $('dpeMax').value || '';
+      $('fGesMax').value = $('gesMax').value || '';
+      currentSort = 'relevance';
+      const wantedSource = pendingSourceFilter;
+      pendingSourceFilter = null;
+      const wantedMatches = (l) => {
+        const names = (l.sources && l.sources.length) ? l.sources : [l.source];
+        if (wantedSource === '__imported__') {
+          return names.some((n) => n === 'SeLoger' || n === 'Leboncoin');
+        }
+        return names.includes(wantedSource);
+      };
+      currentSource = wantedSource && j.listings.some(wantedMatches) ? wantedSource : 'all';
+      visibleCount = 24;
+      updateSortButtons();
+      updateSourceTabs();
+      updateSourceSummary();
+      applyFiltersToResults();
+      const srcCount = lastSources.filter((s) => s.count > 0).length;
+      const unlocated = j.unlocated_count || 0;
+      const approx = j.approx_count || 0;
+      const inDrawnZone = !!(zoneShape || assistantCircle) && selectedCities.size > 0;
+      const prefix = inDrawnZone || j.polygon_filtered
+        ? `${currentListings.length} biens dans la zone`
+        : `${currentListings.length} biens croisés`;
+      setStatus(
+        `${prefix} · ${srcCount}/${lastSources.length} sources avec résultats.`
+        + (j.polygon_filtered && approx ? ` ${approx} positions approximatives (ville).` : '')
+        + (j.polygon_filtered && unlocated ? ` ${unlocated} annonces sans coordonnées masquées.` : ''),
+        'ok'
+      );
+    } catch (e) {
+      if (seq !== searchSeq) return;
+      $('results').innerHTML = `<div class="empty"><strong>Impossible de charger les annonces.</strong>${esc(e.message)}<br>Vérifie que le serveur API tourne sur le port 8766.</div>`;
+      $('resultsTitle').textContent = 'Erreur de recherche';
+      setStatus(`Erreur : ${e.message}`, 'error');
+      console.error(e);
+    }
+  }
+
+  function updateDpeSummary(l) {
+    $('dpeSummary').innerHTML = `
+      <span class="price">${fmtPrice(l.price)}</span>
+      ${l.surface ? `<span class="feature">${fmtSurface(l.surface)}</span>` : ''}
+      ${l.rooms ? `<span class="feature">${l.rooms} pièces</span>` : ''}
+      ${l.dpe ? `<span class="energy" style="background:${dpeColor(l.dpe)}33">DPE ${esc(l.dpe)}</span>` : ''}
+      ${l.ges ? `<span class="energy" style="background:${dpeColor(l.ges)}33">GES ${esc(l.ges)}</span>` : ''}
+    `;
+  }
+
+  function openDpeModal(l) {
+    $('dpeTitle').textContent = l.title || 'Adresses probables';
+    const bits = [l.city, l.postal_code ? `(${l.postal_code})` : '', l.surface ? fmtSurface(l.surface) : '']
+      .filter(Boolean);
+    $('dpeSubtitle').textContent = bits.join(' · ') || 'Le DPE donne l’immeuble, pas toujours l’appartement exact.';
+    updateDpeSummary(l);
+    $('dpeBody').innerHTML = '<p class="status">Recherche des DPE candidats…</p>';
+    $('dpeModal').classList.remove('hidden');
+  }
+
+  function closeDpeModal() {
+    $('dpeModal').classList.add('hidden');
+  }
+
+  function renderDpeResult(j, l) {
+    const hadDpe = !!l.dpe;
+    if (j.listing_dpe || j.listing_ges) {
+      l.dpe = l.dpe || j.listing_dpe || '';
+      l.ges = l.ges || j.listing_ges || '';
+      l.dpe_date = l.dpe_date || j.listing_dpe_date || '';
+      updateDpeSummary(l);
+      renderResults();
+    }
+    const energyNote = j.dpe_status === 'non_soumis'
+      ? 'DPE non soumis (aucun diagnostic requis).'
+      : (j.enriched_from_url && j.listing_dpe && !hadDpe
+        ? `DPE détecté sur la page : ${j.listing_dpe}${j.listing_ges ? ` · GES ${j.listing_ges}` : ''}.`
+        : '');
+    const pub = formatDate(j.listing_date);
+    const dpeDate = formatDate(j.listing_dpe_date);
+    const gap = j.listing_dpe_gap_days;
+    const dateBits = [];
+    if (pub) dateBits.push(`Annonce : ${pub}`);
+    else dateBits.push('Date de l’annonce non communiquée');
+    if (dpeDate) dateBits.push(`DPE de l'annonce : ${dpeDate}`);
+    if (gap !== null && gap !== undefined) dateBits.push(`écart ${Math.abs(gap)} j ${gap < 0 ? 'avant' : 'après'}`);
+    const nearInfo = pub && j.dpe_near_total
+      ? `${j.dpe_near_count}/${j.dpe_near_total} DPE candidat${j.dpe_near_total > 1 ? 's' : ''} à ±180 j de l'annonce.`
+      : '';
+    const zoneNote = j.mode === 'disk'
+      ? `Zone de l'annonce utilisée (rayon ${Math.round(l.blur_radius || 0)} m).`
+      : '';
+    const streetNote = j.used_street
+      ? `Filtre rue utilisé (${j.street_query}).`
+      : (j.street_query ? `Aucun DPE sur « ${j.street_query} » : recherche élargie à la commune.` : '');
+    const note = [zoneNote, streetNote].filter(Boolean).join(' ');
+    const shown = j.results || [];
+    const more = j.candidates > shown.length
+      ? `Les ${shown.length} meilleures adresses sur ${j.candidates}${j.dpe_total ? ` (${j.dpe_total} DPE)` : ''}.`
+      : (j.dpe_total && j.dpe_total > shown.length
+        ? `${shown.length} adresses pour ${j.dpe_total} DPE.`
+        : '');
+    const exact = j.mode === 'exact';
+    $('dpeBody').innerHTML = `
+      ${(dateBits.length || nearInfo || note || energyNote) ? `<div class="dpe-date-note">${dateBits.join(' · ')}${nearInfo ? `<br>${nearInfo}` : ''}${note ? `<br>${esc(note)}` : ''}${energyNote ? `<br>${esc(energyNote)}` : ''}</div>` : ''}
+      <p class="status">${exact ? 'Coordonnées fournies par l’annonce, géocodées à l’adresse.' : 'Le DPE donne l’immeuble ou la parcelle, pas toujours l’appartement exact. Vérifie sur place.'}${more ? ` ${more}` : ''}</p>
+      <div class="dpe-grid">${shown.map(candidateHtml).join('')}</div>
+    `;
+  }
+
+  async function resolve(idx) {
+    const l = currentFiltered[idx] || currentListings[idx];
+    if (!l) return;
+    openDpeModal(l);
+    try {
+      const r = await fetch(`${API}/api/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: l.city || $('city').value.trim(),
+          type: l.type,
+          url: l.url || '',
+          surface: l.surface,
+          dpe: l.dpe,
+          ges: l.ges,
+          floor: l.floor,
+          year: l.year,
+          heating: l.heating,
+          street: l.street,
+          lat: l.lat,
+          lon: l.lon,
+          blur_type: l.blur_type,
+          blur_radius: l.blur_radius,
+          publication_date: l.publication_date,
+          modification_date: l.modification_date,
+          dpe_date: l.dpe_date
+        })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      if (!j.results || !j.results.length) {
+        $('dpeBody').innerHTML = '<p class="status error">Aucun DPE candidat. Élargis la surface ou retire le filtre DPE/GES.</p>';
+        return;
+      }
+      renderDpeResult(j, l);
+    } catch (e) {
+      $('dpeBody').innerHTML = `<p class="status error">Erreur : ${esc(e.message)}</p>`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // URL analysis
+  // ---------------------------------------------------------------------------
+  function analyzedListingHtml(listing) {
+    const photo = (listing.photos && listing.photos[0])
+      ? `<img src="${esc(listing.photos[0])}" alt="" loading="lazy" />`
+      : `<div class="photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></div>`;
+    const dpe = listing.dpe ? `<span class="energy" style="background:${dpeColor(listing.dpe)}33">DPE ${esc(listing.dpe)}</span>` : '';
+    const ges = listing.ges ? `<span class="energy" style="background:${dpeColor(listing.ges)}33">GES ${esc(listing.ges)}</span>` : '';
+    const features = [
+      listing.surface ? `<span class="feature">${fmtSurface(listing.surface)}</span>` : '',
+      listing.rooms ? `<span class="feature">${listing.rooms} pièces</span>` : '',
+      listing.bedrooms ? `<span class="feature">${listing.bedrooms} chambres</span>` : '',
+      listing.year ? `<span class="feature">${listing.year}</span>` : ''
+    ].filter(Boolean).join('');
+    return `<div class="analyzed">
+      ${photo}
+      <div class="analyzed-body">
+        <span class="eyebrow">${esc(listing.source || 'Annonce analysée')}</span>
+        <div class="price">${fmtPrice(listing.price)}</div>
+        <h3>${esc(listing.title || 'Bien immobilier')}</h3>
+        <div class="location-line">${esc(listing.city || '')}${listing.postal_code ? ` (${esc(listing.postal_code)})` : ''}</div>
+        <div class="features">${features}</div>
+        <div class="energy-row">${dpe}${ges}</div>
+        ${listing.description ? `<p class="desc">${esc(listing.description)}</p>` : ''}
+        <div class="url-actions">
+          <a class="btn btn-ghost" href="${esc(listing.url || '#')}" target="_blank" rel="noopener" style="text-decoration:none">Voir l'annonce ↗</a>
+          <button type="button" class="btn btn-ghost" id="searchFromUrl">Chercher dans cette ville</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function analyzeUrl() {
+    const url = $('listingUrl').value.trim();
+    if (!url) {
+      $('listingUrl').focus();
+      return;
+    }
+    $('analyzeBtn').disabled = true;
+    $('analyzeBtn').textContent = 'Analyse…';
+    $('urlResult').classList.remove('hidden');
+    $('urlResult').innerHTML = '<p class="status">Lecture de l’annonce et recherche des DPE candidats…</p>';
+    $('urlResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      const r = await fetch(`${API}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      if (j.error) {
+        $('urlResult').innerHTML = `<div class="url-result-head"><div><span class="eyebrow">Analyse</span><h2>Impossible de lire cette annonce</h2></div></div>
+          <div class="notice"><strong>${esc(j.error)}</strong>${j.advice ? `<br>${esc(j.advice)}` : ''}</div>`;
+        return;
+      }
+      currentUrlResult = j;
+      const listing = j.listing || {};
+      const resolved = j.resolve || {};
+      const candidates = (resolved.results || []).map(candidateHtml).join('');
+      const warning = (j.warnings || []).length
+        ? `<p class="status">${j.warnings.map(esc).join(' · ')}</p>` : '';
+      const title = resolved.mode === 'exact' ? 'Adresse exacte' : 'Adresses probables';
+      const note = resolved.mode === 'exact'
+        ? 'La position exacte était fournie par l’annonce.'
+        : 'Le DPE donne l’immeuble/la parcelle, pas toujours l’appartement exact.';
+      $('urlResult').innerHTML = `
+        <div class="url-result-head">
+          <div>
+            <span class="eyebrow">Annonce analysée</span>
+            <h2>${esc(listing.title || 'Bien immobilier')}</h2>
+            <p>${esc(j.source || '')} · ${candidates ? `${resolved.candidates || 0} adresse${resolved.candidates > 1 ? 's' : ''} probable${resolved.candidates > 1 ? 's' : ''}` : 'pas de DPE candidat'}</p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="closeUrlResult">Fermer</button>
+        </div>
+        ${analyzedListingHtml(listing)}
+        ${warning}
+        <h3 style="margin:18px 0 2px;font-family:Fraunces,Georgia,serif;font-size:1.35rem">${title}</h3>
+        <p class="status">${note}</p>
+        <div class="url-candidates">${candidates || '<p class="status error">Aucun DPE candidat. La surface ou la ville n’a pas pu être extraite.</p>'}</div>
+      `;
+      const fromUrl = $('searchFromUrl');
+      if (fromUrl) {
+        fromUrl.addEventListener('click', () => {
+          if (listing.city) {
+            $('city').value = listing.city;
+            selectedCities.clear();
+            selectedDepts.clear();
+            updateCityUI();
+            updateZoneUI();
+            search();
+          }
+        });
+      }
+      const close = $('closeUrlResult');
+      if (close) close.addEventListener('click', () => $('urlResult').classList.add('hidden'));
+    } catch (e) {
+      $('urlResult').innerHTML = `<div class="url-result-head"><div><span class="eyebrow">Analyse</span><h2>Erreur</h2></div></div><div class="notice">${esc(e.message)}</div>`;
+    } finally {
+      $('analyzeBtn').disabled = false;
+      $('analyzeBtn').textContent = "Analyser l'annonce";
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Street View
+  // ---------------------------------------------------------------------------
+  function openStreetView(lat, lon, address) {
+    if (lat == null || lon == null) return;
+    const label = address || `${lat}, ${lon}`;
+    currentSv = { lat, lon, address: label };
+    $('svAddress').textContent = label;
+    $('svOverlay').textContent = label;
+    $('svOpen').href = streetViewUrl(lat, lon, label);
+    $('svCopy').onclick = () => {
+      if (navigator.clipboard) navigator.clipboard.writeText(label).catch(() => {});
+    };
+    const key = localStorage.getItem('gmapsKey') || '';
+    $('svKey').value = key;
+    if (key) {
+      $('svFrame').src = `https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(key)}&location=${lat},${lon}&heading=0&pitch=0&fov=90`;
+    } else {
+      $('svFrame').src = `https://maps.google.com/maps?q=${encodeURIComponent(label)}&layer=c&cbll=${lat},${lon}&output=svembed`;
+    }
+    $('svModal').classList.remove('hidden');
+  }
+  function closeStreetView() {
+    $('svModal').classList.add('hidden');
+    $('svFrame').src = 'about:blank';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Map (optional)
+  // ---------------------------------------------------------------------------
+  let zoneMap = null;
+  let deptLayer = null;
+  let deptFeatures = [];
+  const selectedDepts = new Set();
+  const layersByCode = new Map();
+  const selectedCities = new Set();
+  let cityLayer = null;
+  let communeLayer = null;
+  let communeMarkers = new Map();
+  let communeCenters = new Map();
+  let loadedCommuneKey = '';
+  let searchPolygon = null;
+  let drawnZonePolygon = null;
+  let drawingZone = false;
+  let drawPoints = [];
+  let drawPreview = null;
+  let zoneShape = null;
+  let assistantCircle = null;
+  let cityFocusLayer = null;
+
+  function deptStyle(code) {
+    const on = selectedDepts.has(code);
+    return {
+      color: '#ffffff',
+      weight: 1,
+      fillColor: on ? '#d95d39' : '#94a3b8',
+      fillOpacity: on ? 0.68 : 0.24
+    };
+  }
+  function updateZoneUI() {
+    const names = deptFeatures
+      .filter((f) => selectedDepts.has(f.properties.code))
+      .map((f) => f.properties.nom);
+    const count = names.length;
+    const cityValue = ($('city').value || '').trim();
+    const bits = [];
+    if (zoneShape || assistantCircle) bits.push('Zone de recherche');
+    if (selectedCities.size) {
+      bits.push(`${selectedCities.size} ville${selectedCities.size > 1 ? 's' : ''} sélectionnée${selectedCities.size > 1 ? 's' : ''}`);
+    }
+    if (count) bits.push(`${count} département${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`);
+    if (!bits.length && cityValue) bits.push(`Ville : ${cityValue}`);
+    $('zoneCount').textContent = bits.length ? bits.join(' · ') : 'Aucun secteur sélectionné';
+    const shown = names.slice(0, 14);
+    const more = names.length - shown.length;
+    $('zoneChips').innerHTML = shown.map((n) => `<span class="chip">${esc(n)}</span>`).join('')
+      + (more > 0 ? `<span class="chip">+${more}</span>` : '');
+  }
+  function updateCityUI() {
+    const list = [...selectedCities];
+    const shown = list.slice(0, 14);
+    const more = list.length - shown.length;
+    $('cityChips').innerHTML = shown.map((n) =>
+      `<span class="chip">${esc(n)} <a href="#" class="chip-remove" data-city="${esc(n)}" aria-label="Retirer">×</a></span>`
+    ).join('') + (more > 0 ? `<span class="chip">+${more} villes</span>` : '');
+  }
+  function updateCommuneStyles() {
+    for (const [name, marker] of communeMarkers) {
+      const on = selectedCities.has(name);
+      marker.setStyle({
+        radius: on ? 8 : 4,
+        fillColor: on ? '#d95d39' : '#64748b',
+        fillOpacity: on ? 0.95 : 0.5
+      });
+    }
+  }
+  const scheduleZoneSearch = debounce(() => {
+    if (selectedCities.size || selectedDepts.size) search();
+  }, 850);
+
+  function updateDrawPreview() {
+    if (!zoneMap) return;
+    if (drawPreview) drawPreview.remove();
+    drawPreview = L.layerGroup().addTo(zoneMap);
+    if (!drawPoints.length) return;
+    L.polyline(drawPoints, { color: '#d95d39', weight: 2, dashArray: '6 4' }).addTo(drawPreview);
+    drawPoints.forEach((p) => {
+      L.circleMarker(p, { radius: 5, color: '#fff', weight: 2, fillColor: '#d95d39', fillOpacity: 1 }).addTo(drawPreview);
+    });
+  }
+
+  function startZoneDraw() {
+    if (!zoneMap) return;
+    clearZoneDraw();
+    if (assistantCircle) { assistantCircle.remove(); assistantCircle = null; }
+    drawingZone = true;
+    drawPoints = [];
+    updateDrawPreview();
+    $('drawZone').textContent = 'Terminer la zone';
+    $('drawZone').classList.add('active');
+    $('drawHint').classList.remove('hidden');
+    $('clearZone').classList.add('hidden');
+    document.getElementById('mapPanel').classList.add('map-drawing');
+    zoneMap.doubleClickZoom.disable();
+    zoneMap.getContainer().style.cursor = 'crosshair';
+  }
+
+  async function finishZoneDraw() {
+    if (!drawingZone) return;
+    if (drawPoints.length < 3) {
+      setStatus('Ajoute au moins 3 sommets pour dessiner une zone.', 'error');
+      return;
+    }
+    drawingZone = false;
+    if (drawPreview) { drawPreview.remove(); drawPreview = null; }
+    if (zoneShape) zoneShape.remove();
+    if (assistantCircle) { assistantCircle.remove(); assistantCircle = null; }
+    zoneShape = L.polygon(drawPoints, {
+      color: '#d95d39', weight: 2, fillColor: '#d95d39', fillOpacity: 0.12
+    }).addTo(zoneMap);
+    drawnZonePolygon = drawPoints.map((p) => [p.lat, p.lng]);
+    searchPolygon = null;
+    clearCityFocus();
+    selectedDepts.clear();
+    selectedCities.clear();
+    $('drawZone').textContent = 'Redessiner la zone';
+    $('drawZone').classList.remove('active');
+    $('drawHint').classList.add('hidden');
+    $('clearZone').classList.remove('hidden');
+    document.getElementById('mapPanel').classList.remove('map-drawing');
+    zoneMap.doubleClickZoom.enable();
+    zoneMap.getContainer().style.cursor = '';
+    try { zoneMap.fitBounds(zoneShape.getBounds(), { padding: [30, 30], maxZoom: 14 }); } catch (e) {}
+
+    // La zone sert à sélectionner les communes dont le centre est dedans.
+    const polygonParam = drawnZonePolygon.map((p) => `${p[0]},${p[1]}`).join('|');
+    try {
+      const r = await fetch(`${API}/api/geo/communes-in-polygon?polygon=${encodeURIComponent(polygonParam)}`);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      (j.departments || []).forEach((d) => selectedDepts.add(d));
+      // Garde-fou : une zone très large peut contenir des centaines de communes.
+      (j.communes || []).slice(0, 30).forEach((c) => selectedCities.add(c.nom));
+      $('showCities').checked = true;
+    } catch (e) {
+      setStatus(`Impossible de lire les villes de la zone : ${e.message}`, 'error');
+      return;
+    }
+    updateZoneUI();
+    updateCityUI();
+    layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+    await loadCommunes();
+    updateCommuneStyles();
+    refreshCityLayer();
+    if (!selectedCities.size) {
+      setStatus('Aucune ville trouvée dans cette zone. Dessine une zone plus large.', 'error');
+      return;
+    }
+    search();
+  }
+
+  function clearZoneDraw() {
+    drawingZone = false;
+    drawPoints = [];
+    searchPolygon = null;
+    drawnZonePolygon = null;
+    if (drawPreview) { drawPreview.remove(); drawPreview = null; }
+    if (zoneShape) { zoneShape.remove(); zoneShape = null; }
+    if (assistantCircle) { assistantCircle.remove(); assistantCircle = null; }
+    selectedCities.clear();
+    selectedDepts.clear();
+    updateCityUI();
+    updateCommuneStyles();
+    refreshCityLayer();
+    layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+    updateZoneUI();
+    $('drawZone').textContent = 'Dessiner une zone';
+    $('drawZone').classList.remove('active');
+    $('drawHint').classList.add('hidden');
+    $('clearZone').classList.add('hidden');
+    document.getElementById('mapPanel').classList.remove('map-drawing');
+    if (zoneMap) {
+      zoneMap.doubleClickZoom.enable();
+      zoneMap.getContainer().style.cursor = '';
+    }
+  }
+
+  function toggleDept(code) {
+    if (drawingZone) return;
+    clearCityFocus();
+    if (selectedDepts.has(code)) selectedDepts.delete(code);
+    else selectedDepts.add(code);
+    const layer = layersByCode.get(code);
+    if (layer) layer.setStyle(deptStyle(code));
+    updateZoneUI();
+    loadCommunes();
+    scheduleZoneSearch();
+  }
+  function toggleCity(name) {
+    if (drawingZone) return;
+    clearCityFocus();
+    if (selectedCities.has(name)) selectedCities.delete(name);
+    else selectedCities.add(name);
+    updateCityUI();
+    updateCommuneStyles();
+    refreshCityLayer();
+    scheduleZoneSearch();
+  }
+  function addCity(name) {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    selectedCities.add(clean);
+    updateCityUI();
+    updateCommuneStyles();
+    refreshCityLayer();
+    scheduleZoneSearch();
+  }
+
+  function clearCityFocus() {
+    if (cityFocusLayer) {
+      cityFocusLayer.remove();
+      cityFocusLayer = null;
+    }
+  }
+
+  async function focusCityOnMap(name) {
+    if (!zoneMap || !name) return;
+    if (selectedDepts.size || selectedCities.size || searchPolygon) return;
+    try {
+      const r = await fetch(`${API}/api/geo/place?q=${encodeURIComponent(name)}`);
+      const j = await r.json();
+      const bb = j.boundingBox;
+      if (!bb) return;
+      clearCityFocus();
+      cityFocusLayer = L.rectangle(
+        [[bb.south, bb.west], [bb.north, bb.east]],
+        { color: '#0b6bcb', weight: 2, fillColor: '#0b6bcb', fillOpacity: 0.04 }
+      ).bindTooltip(j.name || name, { sticky: true }).addTo(zoneMap);
+      zoneMap.fitBounds(
+        [[bb.south, bb.west], [bb.north, bb.east]],
+        { padding: [30, 30], maxZoom: 12 }
+      );
+    } catch (e) {
+      // ville non résolue : la carte reste utilisable.
+    }
+  }
+
+  async function refreshCityLayer() {
+    if (!zoneMap) return;
+    if (cityLayer) { cityLayer.remove(); cityLayer = null; }
+    if (!selectedCities.size) return;
+    cityLayer = L.layerGroup().addTo(zoneMap);
+    const all = [];
+    for (const name of selectedCities) {
+      const c = communeCenters.get(name);
+      if (c) {
+        all.push([c.lat, c.lon]);
+        L.circleMarker([c.lat, c.lon], { radius: 13, color: '#d95d39', weight: 2, fill: false })
+          .bindTooltip(name).addTo(cityLayer);
+        continue;
+      }
+      try {
+        const r = await fetch(`${API}/api/geo/place?q=${encodeURIComponent(name)}`);
+        const j = await r.json();
+        const bb = j.boundingBox;
+        if (!bb) continue;
+        all.push([(bb.south + bb.north) / 2, (bb.west + bb.east) / 2]);
+        L.rectangle([[bb.south, bb.west], [bb.north, bb.east]], { color: '#d95d39', weight: 2, fillOpacity: 0.03 })
+          .bindTooltip(j.name || name, { sticky: true }).addTo(cityLayer);
+      } catch (e) {
+        // ville sans zone Bien'ici : le chip reste utilisable.
+      }
+    }
+    if (all.length) {
+      try { zoneMap.fitBounds(all, { padding: [30, 30], maxZoom: 12 }); } catch (e) {}
+    }
+  }
+
+  async function loadCommunes() {
+    if (!zoneMap) return;
+    if (!$('showCities').checked) {
+      if (communeLayer) { communeLayer.remove(); communeLayer = null; }
+      communeMarkers.clear();
+      communeCenters.clear();
+      loadedCommuneKey = '';
+      return;
+    }
+    const key = [...selectedDepts].sort().join(',');
+    if (key === loadedCommuneKey && communeLayer) return;
+    loadedCommuneKey = key;
+    if (!key) {
+      if (communeLayer) { communeLayer.remove(); communeLayer = null; }
+      communeMarkers.clear();
+      communeCenters.clear();
+      return;
+    }
+    try {
+      const r = await fetch(`${API}/api/geo/communes?departments=${encodeURIComponent(key)}`);
+      const j = await r.json();
+      const communes = j.communes || [];
+      if (communeLayer) communeLayer.remove();
+      communeLayer = L.layerGroup().addTo(zoneMap);
+      communeMarkers.clear();
+      communeCenters.clear();
+      for (const c of communes) {
+        communeCenters.set(c.nom, c);
+        const on = selectedCities.has(c.nom);
+        const marker = L.circleMarker([c.lat, c.lon], {
+          radius: on ? 8 : 4,
+          color: '#fff',
+          weight: 1.5,
+          fillColor: on ? '#d95d39' : '#64748b',
+          fillOpacity: on ? 0.95 : 0.5
+        }).bindTooltip(`${c.nom}${c.population ? ` · ${Math.round(c.population / 1000)}k` : ''}`, { sticky: true })
+          .on('click', () => toggleCity(c.nom))
+          .addTo(communeLayer);
+        communeMarkers.set(c.nom, marker);
+      }
+    } catch (e) {
+      // carte des villes indisponible : le champ reste utilisable.
+    }
+  }
+
+  function buildRegionSelect() {
+    const regions = [...new Map(
+      deptFeatures.map((f) => [f.properties.region_code, f.properties.region_nom])
+    ).entries()].filter(([code]) => code);
+    regions.sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+    $('regionSelect').innerHTML = '<option value="">Toutes les régions</option>'
+      + regions.map(([code, nom]) => `<option value="${esc(code)}">${esc(nom)}</option>`).join('');
+  }
+  function selectRegion(code) {
+    clearCityFocus();
+    selectedDepts.clear();
+    if (code) deptFeatures.filter((f) => f.properties.region_code === code).forEach((f) => selectedDepts.add(f.properties.code));
+    layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+    updateZoneUI();
+    loadCommunes();
+    scheduleZoneSearch();
+  }
+  function clearZones() {
+    clearZoneDraw();
+    clearCityFocus();
+    selectedDepts.clear();
+    selectedCities.clear();
+    $('regionSelect').value = '';
+    $('citySearch').value = '';
+    layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+    updateZoneUI();
+    updateCityUI();
+    updateCommuneStyles();
+    loadCommunes();
+    refreshCityLayer();
+    if ($('city').value.trim()) search();
+  }
+
+  async function initZones() {
+    if (zoneMap) return;
+    mapInitialized = true;
+    $('zoneCount').textContent = 'Chargement de la carte…';
+    $('regionSelect').disabled = true;
+    zoneMap = L.map('map', { scrollWheelZoom: true }).setView([46.6, 2.4], 6);
+    L.tileLayer(
+      'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+      { attribution: '© IGN — Géoplateforme', maxZoom: 19 }
+    ).addTo(zoneMap);
+    zoneMap.on('click', (e) => {
+      if (!drawingZone) return;
+      drawPoints.push(e.latlng);
+      updateDrawPreview();
+    });
+    try {
+      const r = await fetch(`${API}/api/geo/departements`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const geo = await r.json();
+      deptFeatures = geo.features || [];
+      deptLayer = L.geoJSON(geo, {
+        style: (f) => deptStyle(f.properties.code),
+        onEachFeature: (f, layer) => {
+          layersByCode.set(f.properties.code, layer);
+          layer.on('click', () => toggleDept(f.properties.code));
+          layer.bindTooltip(`${f.properties.nom} (${f.properties.code})`, { sticky: true });
+        }
+      }).addTo(zoneMap);
+      zoneMap.fitBounds(deptLayer.getBounds(), { padding: [10, 10] });
+      buildRegionSelect();
+      $('regionSelect').disabled = false;
+      updateZoneUI();
+      loadCommunes();
+      if (selectedCities.size) refreshCityLayer();
+      else focusCityOnMap($('city').value.trim());
+    } catch (e) {
+      $('regionSelect').disabled = true;
+      $('zoneCount').textContent = `Carte indisponible : ${e.message}`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Autocomplete ville (carte)
+  // ---------------------------------------------------------------------------
+  const searchCitySuggestions = debounce(async () => {
+    const q = $('citySearch').value.trim();
+    const box = $('cityResults');
+    if (q.length < 2) { box.classList.add('hidden'); return; }
+    try {
+      const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&type=municipality&limit=6`);
+      const j = await r.json();
+      const feats = j.features || [];
+      if (!feats.length) {
+        box.innerHTML = '<div style="padding:9px 12px;font-size:.8rem;color:#6d7e78">Aucune commune trouvée.</div>';
+        box.classList.remove('hidden');
+        return;
+      }
+      box.innerHTML = feats.map((f) => {
+        const p = f.properties;
+        return `<button type="button" data-name="${esc(p.name)}">${esc(p.label)}</button>`;
+      }).join('');
+      box.classList.remove('hidden');
+      box.querySelectorAll('button').forEach((b) => {
+        b.addEventListener('click', () => {
+          addCity(b.dataset.name);
+          $('citySearch').value = '';
+          box.classList.add('hidden');
+        });
+      });
+    } catch (e) {
+      box.classList.add('hidden');
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sources modal
+  // ---------------------------------------------------------------------------
+  async function openSources() {
+    $('sourcesModal').classList.remove('hidden');
+    const box = $('sourcesList');
+    box.innerHTML = '<p class="status">Chargement des sources…</p>';
+    try {
+      const r = await fetch(`${API}/api/sources`);
+      const j = await r.json();
+      const last = j.last || {};
+      const rows = (j.sources || []).map((s) => {
+        const blocked = s.status === 'bloqué';
+        const assisted = s.status === 'assisté';
+        const info = last[s.name];
+        const status = info
+          ? (info.ok ? `${info.count} annonce${info.count > 1 ? 's' : ''}` : `erreur · ${info.error || 'indisponible'}`)
+          : (assisted ? 'import assisté' : 'pas encore interrogée');
+        return `<div class="source-row ${blocked ? 'blocked' : ''} ${assisted ? 'assisted' : ''}">
+          <span class="dot"></span>
+          <div><strong>${esc(s.name)}</strong><span>${esc(s.mode)} · ${esc(status)}</span><span>${esc(s.note)}</span></div>
+          <div class="source-actions">
+            ${assisted ? `<button type="button" class="source-import" data-import-source="${esc(s.name)}">Importer</button>` : ''}
+            ${(!blocked && !assisted) || (info && info.count > 0) ? `<button type="button" class="btn btn-ghost source-view" data-source="${esc(s.name)}">Voir</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      box.innerHTML = rows || '<p class="status">Aucune source renseignée.</p>';
+    } catch (e) {
+      box.innerHTML = '<p class="status error">Impossible de charger la liste des sources.</p>';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Assistant IA
+  // ---------------------------------------------------------------------------
+  const AI_PRESETS = {
+    openai: { base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    openrouter: { base: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini' },
+    mistral: { base: 'https://api.mistral.ai/v1', model: 'mistral-small-latest' },
+    groq: { base: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+    ollama: { base: 'http://localhost:11434/v1', model: 'llama3.1' },
+    custom: { base: '', model: '' },
+  };
+
+  let aiConfig = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('valentine.ai.config') || 'null');
+      if (saved && saved.provider) return saved;
+    } catch (e) { /* réglages illisibles */ }
+    return { provider: 'openai', base: AI_PRESETS.openai.base, model: AI_PRESETS.openai.model, key: '' };
+  })();
+  let aiHistory = [];
+  let aiBusy = false;
+  let aiSettingsVisible = false;
+
+  function aiPreset(name) {
+    return AI_PRESETS[name] || AI_PRESETS.custom;
+  }
+
+  function aiConfigured() {
+    return !!aiConfig.base && (aiConfig.provider === 'ollama' || !!aiConfig.key);
+  }
+
+  function aiLabel() {
+    return aiConfigured()
+      ? `${aiConfig.provider} · ${aiConfig.model}`
+      : 'Mode local · sans clé API';
+  }
+
+  function updateAiLabel() {
+    const el = $('aiModelLabel');
+    if (el) el.textContent = aiLabel();
+  }
+
+  function fillAiSettings() {
+    $('aiProvider').value = aiConfig.provider || 'openai';
+    $('aiBase').value = aiConfig.base || '';
+    $('aiModel').value = aiConfig.model || '';
+    $('aiKey').value = aiConfig.key || '';
+  }
+
+  function saveAiConfig() {
+    localStorage.setItem('valentine.ai.config', JSON.stringify(aiConfig));
+    updateAiLabel();
+    $('aiSettingsStatus').className = 'status ok';
+    $('aiSettingsStatus').textContent = aiConfigured()
+      ? 'Réglages enregistrés. L’assistant utilise cette IA.'
+      : 'Enregistré. Sans clé, l’assistant reste en mode local.';
+  }
+
+  function scrollAi() {
+    const box = $('aiMessages');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function addAiMessage(role, text) {
+    const el = document.createElement('div');
+    el.className = `ai-msg ${role}`;
+    el.textContent = String(text || '');
+    $('aiMessages').appendChild(el);
+    scrollAi();
+    return el;
+  }
+
+  function addAiAction(text) {
+    const el = document.createElement('div');
+    el.className = 'ai-msg action';
+    el.textContent = String(text || '');
+    $('aiMessages').appendChild(el);
+    scrollAi();
+  }
+
+  function assistantContext() {
+    const counts = sourceCounts();
+    const prices = currentFiltered.filter((l) => l.price && l.surface);
+    const avgM2 = prices.length
+      ? Math.round(prices.reduce((n, l) => n + l.price / l.surface, 0) / prices.length)
+      : null;
+    return {
+      recherche: lastSearchLabel || 'aucune',
+      type: currentType,
+      ville_saisie: $('city').value.trim(),
+      zone: selectedCities.size ? {
+        villes: [...selectedCities].slice(0, 25),
+        departements: [...selectedDepts],
+        rayon: assistantCircle ? Math.round(assistantCircle.getRadius() / 1000) : null,
+      } : null,
+      filtres: {
+        prix_max: Number($('maxPrice').value) || null,
+        surface_min: Number($('minSurface').value) || null,
+        surface_max: Number($('maxSurface').value) || null,
+        pieces_min: Number($('minRooms').value) || null,
+        dpe_max: $('dpeMax').value || null,
+        ges_max: $('gesMax').value || null,
+      },
+      resultats: currentListings.length,
+      affiches: currentFiltered.length,
+      prix_moyen_m2: avgM2,
+      sources: Object.fromEntries(counts),
+      source_active: currentSource,
+      tri: currentSort,
+      top_biens: currentFiltered.slice(0, 10).map((l, i) => ({
+        index: i,
+        ville: l.city,
+        prix: l.price,
+        surface: l.surface,
+        pieces: l.rooms,
+        chambres: l.bedrooms,
+        dpe: l.dpe,
+        ges: l.ges,
+        sources: (l.sources && l.sources.length) ? l.sources.join('+') : l.source,
+        titre: l.title,
+      })),
+    };
+  }
+
+  function aiSystemPrompt() {
+    return `Tu es l’assistant de Valentine, un site français de recherche immobilière.
+Tu réponds TOUJOURS en français et STRICTEMENT avec un objet JSON valide, sans texte autour, de la forme :
+{"reply":"texte pour l’utilisateur","actions":[{"name":"search","args":{...}}]}
+
+Actions disponibles :
+- search : {city?, cities?, type?("maison"|"appartement"), max_price?, min_price?, min_surface?, max_surface?, min_rooms?, max_rooms?, dpe_max?, ges_max?}
+- filters : mêmes champs (applique sans relancer les sources)
+- select_zone : {city, radius_km}
+- clear_zone : {}
+- source : {name}
+- sort : {value ("relevance"|"date_desc"|"price_asc"|"price_desc"|"surface_desc")}
+- open_dpe : {index} (index dans les résultats affichés, 0 = premier)
+- open_import : {source ("SeLoger"|"Leboncoin")}
+- analyze_url : {url}
+- open_map : {}
+
+Règles :
+- "reply" : 1 à 3 phrases concises, sans markdown, sans chiffres inventés.
+- Enchaîne au maximum 3 actions.
+- Pour une recherche immobilière, utilise search. Prix en euros, surfaces en m², rayon en km.
+- Pour « autour de X », utilise select_zone avec un rayon réaliste (5 à 20 km).
+- Pour une question sur les résultats, utilise le contexte fourni et réponds sans action.
+- Si l’utilisateur demande SeLoger ou Leboncoin et qu’il n’y a pas d’annonces, propose open_import.
+Contexte actuel : ${JSON.stringify(assistantContext())}`;
+  }
+
+  function parseAiPayload(raw) {
+    let text = String(raw || '').trim();
+    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    try { return JSON.parse(text); } catch (e) { /* on tente d'extraire l'objet */ }
+    const start = text.indexOf('{');
+    if (start >= 0) {
+      let depth = 0;
+      let inString = false;
+      let escape = false;
+      for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inString) {
+          if (escape) escape = false;
+          else if (ch === '\\') escape = true;
+          else if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === '{') depth += 1;
+        else if (ch === '}') {
+          depth -= 1;
+          if (depth === 0) {
+            try { return JSON.parse(text.slice(start, i + 1)); } catch (e) { break; }
+          }
+        }
+      }
+    }
+    return { reply: text, actions: [] };
+  }
+
+  async function callAi(messages) {
+    const base = String(aiConfig.base || '').replace(/\/+$/, '');
+    if (!base) throw new Error('URL de l’API manquante');
+    const headers = { 'Content-Type': 'application/json' };
+    if (aiConfig.key) headers.Authorization = `Bearer ${aiConfig.key}`;
+    const r = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages,
+        temperature: 0.2,
+      }),
+    });
+    let j = null;
+    try { j = await r.json(); } catch (e) { /* réponse non JSON */ }
+    if (!r.ok) {
+      const msg = j?.error?.message || j?.message || j?.error || `HTTP ${r.status}`;
+      throw new Error(String(msg));
+    }
+    return j?.choices?.[0]?.message?.content || '';
+  }
+
+  async function aiSetCity(city) {
+    if (zoneShape || assistantCircle || selectedCities.size || selectedDepts.size) {
+      clearZoneDraw();
+      refreshCityLayer();
+    }
+    $('city').value = city;
+  }
+
+  async function aiSearch(args = {}) {
+    if (args.type === 'maison' || args.type === 'appartement') {
+      const btn = document.querySelector(`.type-toggle [data-type="${args.type}"]`);
+      if (btn) btn.click();
+    }
+    if (args.city) await aiSetCity(String(args.city));
+    if (Array.isArray(args.cities) && args.cities.length) {
+      clearZoneDraw();
+      args.cities.forEach((c) => selectedCities.add(String(c)));
+      updateCityUI();
+      updateZoneUI();
+      refreshCityLayer();
+    }
+    const fields = {
+      max_price: 'maxPrice', min_price: 'minPrice',
+      min_surface: 'minSurface', max_surface: 'maxSurface',
+      min_rooms: 'minRooms', max_rooms: 'maxRooms',
+      dpe_max: 'dpeMax', ges_max: 'gesMax',
+    };
+    for (const [key, id] of Object.entries(fields)) {
+      if (args[key] !== undefined && args[key] !== null && args[key] !== '') $(id).value = args[key];
+    }
+    await search();
+    return `Recherche terminée : ${currentListings.length} bien${currentListings.length > 1 ? 's' : ''}${lastSearchLabel ? ` ${lastSearchLabel}` : ''}.`;
+  }
+
+  async function aiFilters(args = {}) {
+    const fields = {
+      max_price: 'fMaxPrice', min_surface: 'fMinSurface', max_surface: 'fMaxSurface',
+      min_rooms: 'fMinRooms', dpe_max: 'fDpeMax', ges_max: 'fGesMax',
+    };
+    let n = 0;
+    for (const [key, id] of Object.entries(fields)) {
+      if (args[key] !== undefined && args[key] !== null && args[key] !== '') {
+        $(id).value = args[key];
+        n += 1;
+      }
+    }
+    applyFiltersToResults();
+    return n ? `Filtres appliqués sur les ${currentListings.length} annonces déjà chargées.` : 'Aucun filtre à appliquer.';
+  }
+
+  async function aiSource(name) {
+    const target = String(name || '').trim();
+    if (!target) return 'Source non précisée.';
+    const counts = sourceCounts();
+    if (!counts.has(target) && (target === 'SeLoger' || target === 'Leboncoin')) {
+      pendingSourceFilter = target;
+      await search();
+      if (!sourceCounts().has(target)) {
+        return `Aucune annonce ${target} pour l’instant. Ouvre l’import assisté pour ajouter une page.`;
+      }
+      return `Filtre ${target} appliqué : ${sourceCounts().get(target)} bien(s).`;
+    }
+    currentSource = target;
+    updateSourceTabs();
+    applyFiltersToResults();
+    return `Filtre ${target} appliqué : ${sourceCounts().get(target) || 0} bien(s).`;
+  }
+
+  async function aiZone(city, radiusKm = 10) {
+    const name = String(city || $('city').value || '').trim();
+    if (!name) throw new Error('Ville manquante pour la zone');
+    const radius = Math.max(1, Math.min(50, Number(radiusKm) || 10));
+    $('toggleMap').click();
+    await new Promise((r) => setTimeout(r, 350));
+    const r = await fetch(`${API}/api/geo/communes-in-radius?q=${encodeURIComponent(name)}&radius=${radius}`);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    clearZoneDraw();
+    (j.departments || []).forEach((d) => selectedDepts.add(d));
+    (j.communes || []).slice(0, 30).forEach((c) => selectedCities.add(c.nom));
+    if (!selectedCities.size) {
+      return `Aucune commune trouvée dans ${radius} km autour de ${name}.`;
+    }
+    $('showCities').checked = true;
+    updateZoneUI();
+    updateCityUI();
+    layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+    await loadCommunes();
+    updateCommuneStyles();
+    refreshCityLayer();
+    if (assistantCircle) assistantCircle.remove();
+    if (zoneMap && j.center) {
+      assistantCircle = L.circle([j.center.lat, j.center.lon], {
+        radius: radius * 1000,
+        color: '#d95d39', weight: 2, dashArray: '7 6',
+        fillColor: '#d95d39', fillOpacity: 0.06
+      }).addTo(zoneMap);
+      try { zoneMap.fitBounds(assistantCircle.getBounds(), { padding: [30, 30] }); } catch (e) {}
+    }
+    await search();
+    return `${selectedCities.size} ville${selectedCities.size > 1 ? 's' : ''} sélectionnée${selectedCities.size > 1 ? 's' : ''} dans ${radius} km autour de ${name} · ${currentListings.length} biens.`;
+  }
+
+  function aiSort(value) {
+    const allowed = ['relevance', 'date_desc', 'price_asc', 'price_desc', 'surface_desc'];
+    const v = allowed.includes(value) ? value : 'relevance';
+    currentSort = v;
+    visibleCount = 24;
+    updateSortButtons();
+    applyFiltersToResults();
+    return `Tri appliqué : ${v}.`;
+  }
+
+  function aiLocalAnswer(text) {
+    const q = normalizeWords(text);
+    if (!q) return 'Pose-moi une question sur les biens, une ville ou une zone.';
+
+    const zone = q.match(/rayon de (\d+(?:[.,]\d+)?)\s*km autour de (.+)/)
+      || q.match(/zone de (\d+(?:[.,]\d+)?)\s*km autour de (.+)/)
+      || q.match(/(\d+(?:[.,]\d+)?)\s*km autour de (.+)/);
+    if (zone) {
+      return { action: { name: 'select_zone', args: { radius_km: Number(zone[1].replace(',', '.')), city: zone[2].trim() } } };
+    }
+    if (/(supprime|efface|enleve|retire).*(zone|secteur)/.test(q) || /(zone|secteur).*(supprime|efface|enleve)/.test(q)) {
+      return { action: { name: 'clear_zone', args: {} } };
+    }
+    if (/(ouvre|affiche|montre).*(carte|plan)/.test(q)) {
+      return { action: { name: 'open_map', args: {} } };
+    }
+    if (/(importe|import).*(seloger)/.test(q)) {
+      return { action: { name: 'open_import', args: { source: 'SeLoger' } } };
+    }
+    if (/(importe|import).*(leboncoin|bon coin)/.test(q)) {
+      return { action: { name: 'open_import', args: { source: 'Leboncoin' } } };
+    }
+    if (/(montre|filtre|affiche).*(seloger)/.test(q)) {
+      return { action: { name: 'source', args: { name: 'SeLoger' } } };
+    }
+    if (/(montre|filtre|affiche).*(leboncoin|bon coin)/.test(q)) {
+      return { action: { name: 'source', args: { name: 'Leboncoin' } } };
+    }
+    if (/prix.*(croissant|ascendant)/.test(q)) return { action: { name: 'sort', args: { value: 'price_asc' } } };
+    if (/prix.*(decroissant|descendant)/.test(q)) return { action: { name: 'sort', args: { value: 'price_desc' } } };
+    if (/(plus recent|recentes|recent)/.test(q)) return { action: { name: 'sort', args: { value: 'date_desc' } } };
+    if (/(prix au m|prix moyen|compar).*(m|resultat)/.test(q) || /prix au m2/.test(q)) {
+      const rows = currentFiltered.filter((l) => l.price && l.surface);
+      if (!rows.length) return { reply: 'Je n’ai pas encore de résultats avec prix et surface. Lance une recherche d’abord.' };
+      const avg = Math.round(rows.reduce((n, l) => n + l.price / l.surface, 0) / rows.length);
+      return { reply: `Sur ${rows.length} biens affichés, le prix moyen est d’environ ${avg.toLocaleString('fr-FR')} €/m². Le moins cher au m² est ${Math.round(Math.min(...rows.map((l) => l.price / l.surface))).toLocaleString('fr-FR')} €/m².` };
+    }
+    if (/dpe/.test(q)) {
+      const known = currentFiltered.filter((l) => l.dpe);
+      if (!known.length) return { reply: 'Aucun DPE n’est affiché dans les résultats actuels. Ouvre une annonce et clique sur « Trouver l’adresse » : le DPE sera récupéré depuis la page de détail.' };
+      const counts = {};
+      known.forEach((l) => { counts[l.dpe] = (counts[l.dpe] || 0) + 1; });
+      const order = 'ABCDEFG';
+      const best = known.slice().sort((a, b) => order.indexOf(a.dpe) - order.indexOf(b.dpe))[0];
+      return { reply: `${known.length} biens ont un DPE connu. Répartition : ${order.split('').filter((d) => counts[d]).map((d) => `${d} ${counts[d]}`).join(' · ')}. Le meilleur est le bien n°${currentFiltered.indexOf(best) + 1} (${best.dpe}) à ${best.city || 'ville inconnue'}.` };
+    }
+
+    const wantsSearch = /(cherche|trouve|recherche|veux|montre).*(maison|appartement|studio|bien|logement)/.test(q)
+      || /(maison|appartement|studio).*(a vendre|vente)/.test(q);
+    if (wantsSearch) {
+      const args = {};
+      if (/\bmaison/.test(q)) args.type = 'maison';
+      else if (/(appartement|studio|appart)/.test(q)) args.type = 'appartement';
+      const cityMatch = q.match(/(?:a|sur|dans)\s+([a-z0-9\-' ]{3,40}?)(?=\s+(?:sous|moins|max|budget|avec|pour|au|a partir)|[,.!?]|$)/);
+      if (cityMatch) {
+        args.city = cityMatch[1].trim().replace(/(^|[\s\-'])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+      }
+      const priceMatch = q.match(/(?:sous|moins de|max(?:imum)?|budget(?: de)?)\s*([\d\s.]{3,12})/)
+        || q.match(/([\d\s.]{3,12})\s*(?:euros?|€)/);
+      if (priceMatch) {
+        const price = Number(priceMatch[1].replace(/[^\d]/g, ''));
+        if (price) args.max_price = price;
+      }
+      const surfaceMatch = q.match(/(?:surface|au moins|min(?:imum)?)\s*(\d{2,3})\s*m/);
+      if (surfaceMatch) args.min_surface = Number(surfaceMatch[1]);
+      const roomsMatch = q.match(/(\d)\s*(?:pieces?|p\b|chambres?)/);
+      if (roomsMatch) args.min_rooms = Number(roomsMatch[1]);
+      if (Object.keys(args).length) return { action: { name: 'search', args } };
+    }
+
+    if (/premiere|premier|adresse|localise/.test(q) && currentFiltered.length) {
+      return { action: { name: 'open_dpe', args: { index: 0 } } };
+    }
+    return { reply: 'Je peux lancer une recherche, sélectionner les villes d’une zone, filtrer par source, trier, ouvrir un DPE ou l’import SeLoger/Leboncoin. Exemple : « cherche une maison à Lille sous 250 000 € ». Pour une conversation libre, ajoute une clé API dans les réglages ⚙.' };
+  }
+
+  async function runAiAction(action) {
+    const name = action?.name || action?.action;
+    const args = action?.args || action?.arguments || {};
+    if (name === 'search') return aiSearch(args);
+    if (name === 'filters') return aiFilters(args);
+    if (name === 'select_zone') return aiZone(args.city, args.radius_km);
+    if (name === 'clear_zone') {
+      clearZoneDraw();
+      refreshCityLayer();
+      if ($('city').value.trim()) await search();
+      return 'Zone effacée.';
+    }
+    if (name === 'source') return aiSource(args.name);
+    if (name === 'sort') return aiSort(args.value);
+    if (name === 'open_dpe') { await resolve(Number(args.index) || 0); return `DPE ouvert pour le bien n°${(Number(args.index) || 0) + 1}.`; }
+    if (name === 'open_import') { await openImport(args.source); return `Import ${args.source || ''} ouvert.`; }
+    if (name === 'analyze_url') {
+      document.querySelector('.search-tab[data-tab="url"]')?.click();
+      $('listingUrl').value = args.url || '';
+      await analyzeUrl();
+      return 'Annonce analysée.';
+    }
+    if (name === 'open_map') {
+      $('toggleMap').click();
+      return 'Carte ouverte.';
+    }
+    return null;
+  }
+
+  async function sendAiMessage(rawText) {
+    const text = String(rawText || '').trim();
+    if (!text || aiBusy) return;
+    $('aiInput').value = '';
+    addAiMessage('user', text);
+    aiHistory.push({ role: 'user', content: text });
+    aiBusy = true;
+    $('aiSend').disabled = true;
+    try {
+      let payload;
+      if (!aiConfigured()) {
+        const local = aiLocalAnswer(text);
+        payload = local.action
+          ? { reply: 'Je lance l’action demandée.', actions: [local.action] }
+          : { reply: local.reply, actions: [] };
+      } else {
+        const raw = await callAi([
+          { role: 'system', content: aiSystemPrompt() },
+          ...aiHistory.slice(-10),
+        ]);
+        payload = parseAiPayload(raw);
+      }
+      const reply = String(payload.reply || '').trim() || 'C’est fait.';
+      addAiMessage('assistant', reply);
+      aiHistory.push({ role: 'assistant', content: reply });
+      const actions = Array.isArray(payload.actions) ? payload.actions.slice(0, 3) : [];
+      for (const action of actions) {
+        try {
+          const label = await runAiAction(action);
+          if (label) addAiAction(`✓ ${label}`);
+        } catch (e) {
+          addAiMessage('error', `Action impossible : ${e.message}`);
+        }
+      }
+    } catch (e) {
+      addAiMessage('error', `Erreur IA : ${e.message}. Vérifie la clé, le modèle et l’URL dans les réglages ⚙.`);
+    } finally {
+      aiBusy = false;
+      $('aiSend').disabled = false;
+      $('aiInput').focus();
+    }
+  }
+
+  function openAssistant() {
+    $('assistantPanel').classList.add('open');
+    setTimeout(() => $('aiInput').focus(), 120);
+    if (!$('aiMessages').children.length) {
+      addAiMessage('assistant', 'Bonjour. Je peux chercher un bien, sélectionner les villes d’une zone, filtrer par source, trier ou ouvrir un DPE. Dis-moi ce que tu cherches.');
+    }
+  }
+
+  $('assistantBtn').addEventListener('click', () => {
+    if ($('assistantPanel').classList.contains('open')) $('assistantPanel').classList.remove('open');
+    else openAssistant();
+  });
+  $('aiClose').addEventListener('click', () => $('assistantPanel').classList.remove('open'));
+  $('aiForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendAiMessage($('aiInput').value);
+  });
+  $('aiInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendAiMessage($('aiInput').value);
+    }
+  });
+  $('aiSuggestions').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ai-prompt]');
+    if (b) sendAiMessage(b.dataset.aiPrompt);
+  });
+  $('aiSettingsBtn').addEventListener('click', () => {
+    aiSettingsVisible = true;
+    fillAiSettings();
+    $('aiSettings').classList.remove('hidden');
+  });
+  $('aiSettingsClose').addEventListener('click', () => {
+    aiSettingsVisible = false;
+    $('aiSettings').classList.add('hidden');
+  });
+  $('aiProvider').addEventListener('change', () => {
+    const preset = aiPreset($('aiProvider').value);
+    if (preset.base) $('aiBase').value = preset.base;
+    if (preset.model) $('aiModel').value = preset.model;
+  });
+  $('aiSave').addEventListener('click', () => {
+    aiConfig = {
+      provider: $('aiProvider').value,
+      base: $('aiBase').value.trim(),
+      model: $('aiModel').value.trim(),
+      key: $('aiKey').value.trim(),
+    };
+    saveAiConfig();
+  });
+  $('aiClear').addEventListener('click', () => {
+    $('aiKey').value = '';
+    aiConfig.key = '';
+    saveAiConfig();
+  });
+  window.__valentineAi = {
+    send: sendAiMessage,
+    context: assistantContext,
+    localAnswer: aiLocalAnswer,
+    zone: aiZone,
+    search: aiSearch,
+    config: () => aiConfig,
+  };
+  updateAiLabel();
+
+  // ---------------------------------------------------------------------------
+  // Import assisté SeLoger / Leboncoin
+  // ---------------------------------------------------------------------------
+  function showImportToast(delta) {
+    document.querySelectorAll('.import-toast').forEach((el) => el.remove());
+    const el = document.createElement('div');
+    el.className = 'import-toast';
+    el.innerHTML = `<span>${delta} nouvelle${delta > 1 ? 's' : ''} annonce${delta > 1 ? 's' : ''} importée${delta > 1 ? 's' : ''}.</span>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Voir';
+    btn.addEventListener('click', () => { el.remove(); viewImported(); });
+    el.appendChild(btn);
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 15000);
+  }
+
+  async function refreshImportStatus(silent = false) {
+    try {
+      const r = await fetch(`${API}/api/sources`);
+      const j = await r.json();
+      importCounts = j.imported || {};
+      const total = Object.values(importCounts).reduce((n, v) => n + (Number(v) || 0), 0);
+      const badge = $('importBadge');
+      if (badge) {
+        badge.textContent = String(total);
+        badge.classList.toggle('hidden', total === 0);
+      }
+      for (const name of ['SeLoger', 'Leboncoin']) {
+        const el = $(`import${name}State`);
+        if (!el) continue;
+        const n = Number(importCounts[name] || 0);
+        el.className = n ? 'import-state ok' : 'import-state';
+        el.textContent = n
+          ? `${n} annonce${n > 1 ? 's' : ''} ${name} importée${n > 1 ? 's' : ''}, prête${n > 1 ? 's' : ''} pour les recherches.`
+          : `Aucune annonce ${name} importée pour l’instant.`;
+      }
+      if (importTotalSeen !== null && total > importTotalSeen && !silent) {
+        showImportToast(total - importTotalSeen);
+      }
+      importTotalSeen = total;
+      return importCounts;
+    } catch (e) {
+      return importCounts;
+    }
+  }
+
+  async function openImport(source) {
+    $('importModal').classList.remove('hidden');
+    await refreshImportStatus(true);
+    if (source) {
+      const cards = [...document.querySelectorAll('#importModal .import-card')];
+      const card = cards.find((c) => (c.querySelector('h3')?.textContent || '').toLowerCase().includes(source.toLowerCase()));
+      if (card) {
+        card.style.outline = '2px solid #d95d39';
+        setTimeout(() => { card.style.outline = ''; }, 1800);
+      }
+    }
+  }
+
+  function closeImport() {
+    $('importModal').classList.add('hidden');
+  }
+
+  async function viewImported() {
+    await refreshImportStatus(true);
+    const entries = Object.entries(importCounts).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      setStatus('Aucune annonce importée pour l’instant. Ouvre SeLoger ou Leboncoin puis clique sur « Importer dans Valentine ».', 'error');
+      return;
+    }
+    closeImport();
+    pendingSourceFilter = '__imported__';
+    await search();
+    document.querySelector('.results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  $('importBtn').addEventListener('click', () => openImport());
+  $('importClose').addEventListener('click', closeImport);
+  $('importModal').addEventListener('click', (e) => { if (e.target === $('importModal')) closeImport(); });
+  $('importRefresh').addEventListener('click', () => refreshImportStatus(true));
+  $('importView').addEventListener('click', viewImported);
+  $('sourceTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-import-source]');
+    if (b) { e.stopPropagation(); openImport(b.dataset.importSource); }
+  }, true);
+  $('sourceSummary').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-import-source]');
+    if (b) openImport(b.dataset.importSource);
+  });
+  window.addEventListener('focus', () => { if (importTotalSeen !== null) refreshImportStatus(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && importTotalSeen !== null) refreshImportStatus();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Events
+  // ---------------------------------------------------------------------------
+  document.querySelectorAll('.search-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.search-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      const urlMode = tab.dataset.tab === 'url';
+      $('searchPane').classList.toggle('hidden', urlMode);
+      $('urlPane').classList.toggle('hidden', !urlMode);
+      if (urlMode) setTimeout(() => $('listingUrl').focus(), 50);
+    });
+  });
+
+  document.querySelectorAll('.type-toggle button').forEach((b) => {
+    b.addEventListener('click', () => {
+      currentType = b.dataset.type;
+      document.querySelectorAll('.type-toggle button').forEach((x) => x.classList.toggle('active', x === b));
+    });
+  });
+
+  $('toggleAdvancedSearch').addEventListener('click', () => {
+    const hidden = $('advancedSearch').classList.toggle('hidden');
+    $('toggleAdvancedSearch').textContent = hidden ? '+ de critères' : '− de critères';
+  });
+
+  $('toggleMap').addEventListener('click', () => {
+    $('mapPanel').classList.remove('hidden');
+    $('mapPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateZoneUI();
+    if (!mapInitialized) initZones();
+    else if (zoneMap) {
+      setTimeout(() => {
+        zoneMap.invalidateSize();
+        focusCityOnMap($('city').value.trim());
+      }, 80);
+    }
+  });
+  $('closeMap').addEventListener('click', () => $('mapPanel').classList.add('hidden'));
+  $('drawZone').addEventListener('click', () => {
+    if (drawingZone) finishZoneDraw();
+    else startZoneDraw();
+  });
+  $('clearZone').addEventListener('click', () => {
+    clearZoneDraw();
+    if (selectedDepts.size || selectedCities.size || $('city').value.trim()) search();
+  });
+  $('showCities').addEventListener('change', loadCommunes);
+  $('regionSelect').addEventListener('change', (e) => selectRegion(e.target.value));
+  $('clearZones').addEventListener('click', clearZones);
+  $('citySearch').addEventListener('input', searchCitySuggestions);
+  $('citySearch').addEventListener('focus', () => {
+    if ($('citySearch').value.trim().length >= 2) searchCitySuggestions();
+  });
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip-remove');
+    if (chip) {
+      e.preventDefault();
+      selectedCities.delete(chip.dataset.city);
+      updateCityUI();
+      updateCommuneStyles();
+      refreshCityLayer();
+      scheduleZoneSearch();
+      return;
+    }
+    if (!e.target.closest('.city-picker') && !e.target.closest('#cityResults')) {
+      $('cityResults').classList.add('hidden');
+    }
+  });
+
+  document.querySelectorAll('.quick-cities button').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (b.dataset.city) {
+        $('city').value = b.dataset.city;
+        selectedCities.clear();
+        selectedDepts.clear();
+        updateCityUI();
+        updateZoneUI();
+        layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+        search();
+      } else if (b.dataset.dept) {
+        selectedCities.clear();
+        selectedDepts.clear();
+        selectedDepts.add(b.dataset.dept);
+        updateCityUI();
+        updateZoneUI();
+        layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+        search();
+      }
+    });
+  });
+
+  $('searchBtn').addEventListener('click', search);
+  $('city').addEventListener('input', () => {
+    // Dès qu'on retape une ville, on quitte le mode « zone dessinée ».
+    if (searchPolygon || selectedDepts.size || selectedCities.size) {
+      clearZoneDraw();
+      selectedDepts.clear();
+      selectedCities.clear();
+      updateZoneUI();
+      updateCityUI();
+      updateCommuneStyles();
+      layersByCode.forEach((layer, c) => layer.setStyle(deptStyle(c)));
+      refreshCityLayer();
+    }
+  });
+  $('city').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+  $('analyzeBtn').addEventListener('click', analyzeUrl);
+  $('listingUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter') analyzeUrl(); });
+
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('.js-resolve');
+    if (!a) return;
+    e.preventDefault();
+    resolve(Number(a.dataset.idx));
+  });
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('.js-sv');
+    if (!a) return;
+    e.preventDefault();
+    openStreetView(Number(a.dataset.lat), Number(a.dataset.lon), a.dataset.address || '');
+  });
+
+  $('dpeClose').addEventListener('click', closeDpeModal);
+  $('dpeModal').addEventListener('click', (e) => { if (e.target === $('dpeModal')) closeDpeModal(); });
+  $('svSaveKey').addEventListener('click', () => {
+    const key = $('svKey').value.trim();
+    if (key) localStorage.setItem('gmapsKey', key);
+    else localStorage.removeItem('gmapsKey');
+    if (currentSv) openStreetView(currentSv.lat, currentSv.lon, currentSv.address);
+  });
+  $('svClose').addEventListener('click', closeStreetView);
+  $('svModal').addEventListener('click', (e) => { if (e.target === $('svModal')) closeStreetView(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeStreetView();
+      closeDpeModal();
+      $('sourcesModal').classList.add('hidden');
+    }
+  });
+
+  $('sourcesBtn').addEventListener('click', openSources);
+  $('sourcesRefresh').addEventListener('click', () => {
+    $('sourcesModal').classList.add('hidden');
+    search();
+  });
+  $('sourcesList').addEventListener('click', (e) => {
+    const imp = e.target.closest('.source-import');
+    if (imp) {
+      $('sourcesModal').classList.add('hidden');
+      openImport(imp.dataset.importSource);
+      return;
+    }
+    const b = e.target.closest('.source-view');
+    if (!b) return;
+    currentSource = b.dataset.source;
+    $('sourcesModal').classList.add('hidden');
+    updateSourceTabs();
+    applyFiltersToResults();
+    document.querySelector('.results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('sourcesClose').addEventListener('click', () => $('sourcesModal').classList.add('hidden'));
+  $('sourcesModal').addEventListener('click', (e) => { if (e.target === $('sourcesModal')) $('sourcesModal').classList.add('hidden'); });
+
+  document.querySelectorAll('#sortTabs button').forEach((b) => {
+    b.addEventListener('click', () => {
+      currentSort = b.dataset.sort;
+      visibleCount = 24;
+      updateSortButtons();
+      applyFiltersToResults();
+    });
+  });
+  $('sourceTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.source-tab');
+    if (!b) return;
+    currentSource = b.dataset.source;
+    visibleCount = 24;
+    updateSourceTabs();
+    applyFiltersToResults();
+  });
+  $('quickChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-quick]');
+    if (!b) return;
+    const q = b.dataset.quick;
+    if (q === 'near') $('fNear').checked = !$('fNear').checked;
+    else if (q === 'exact') $('fExact').checked = !$('fExact').checked;
+    else if (q === 'dpeC') $('fDpeMax').value = $('fDpeMax').value === 'C' ? '' : 'C';
+    else if (q === 'hideDup') $('fHideDup').checked = !$('fHideDup').checked;
+    else if (q === 'budget200') $('fMaxPrice').value = $('fMaxPrice').value === '200000' ? '' : '200000';
+    else if (q === 'rooms3') $('fMinRooms').value = $('fMinRooms').value === '3' ? '' : '3';
+    visibleCount = 24;
+    applyFiltersToResults();
+  });
+  $('toggleFilters').addEventListener('click', () => {
+    const hidden = $('advancedFilters').classList.toggle('hidden');
+    $('toggleFilters').textContent = hidden ? 'Tous les filtres' : 'Masquer les filtres';
+  });
+  $('resetFilters').addEventListener('click', () => {
+    ['fMaxPrice', 'fMinSurface', 'fMaxSurface', 'fMinRooms'].forEach((id) => { $(id).value = ''; });
+    ['fDpeMax', 'fGesMax'].forEach((id) => { $(id).value = ''; });
+    $('fExact').checked = false;
+    $('fNear').checked = false;
+    $('fHideDup').checked = true;
+    currentSort = 'relevance';
+    currentSource = 'all';
+    visibleCount = 24;
+    updateSortButtons();
+    updateSourceTabs();
+    applyFiltersToResults();
+  });
+  ['fMaxPrice', 'fMinSurface', 'fMaxSurface', 'fMinRooms', 'fDpeMax', 'fGesMax', 'fExact', 'fNear', 'fHideDup']
+    .forEach((id) => {
+      $(id).addEventListener('change', applyFiltersToResults);
+      $(id).addEventListener('input', debounce(applyFiltersToResults, 250));
+    });
+  $('loadMore').addEventListener('click', () => {
+    visibleCount += 24;
+    renderResults();
+    $('loadMoreWrap').classList.toggle('hidden', visibleCount >= currentFiltered.length);
+  });
+
+  // Debug hook conservé pour les tests.
+  window.__valentineZones = {
+    toggleCity, toggleDept, loadCommunes, selectedCities, selectedDepts, communeMarkers,
+    startZoneDraw, finishZoneDraw, clearZoneDraw,
+    getZoneMap: () => zoneMap,
+    getPolygon: () => drawnZonePolygon
+  };
+
+  // Application installable : mise en cache de la coquille + mode hors ligne.
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  // Premier chargement : recherche par défaut, sans ouvrir la carte.
+  refreshImportStatus(true);
+  search();
+})();
+</script>
+</body>
+</html>
