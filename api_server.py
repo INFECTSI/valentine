@@ -215,6 +215,21 @@ def smart_title(name):
     return re.sub(r"\s+", " ", "".join(out)).strip()
 
 
+def city_key(value):
+    return re.sub(r"[^a-z0-9]+", " ", norm(value)).strip()
+
+
+def city_matches(values, candidate):
+    """Vrai si la ville de l'annonce correspond à une des villes demandées."""
+    key = city_key(candidate)
+    if not key:
+        return False
+    targets = {city_key(v) for v in values if v}
+    if key in targets:
+        return True
+    return any(key.startswith(t + " ") or key.endswith(" " + t) for t in targets)
+
+
 def parse_price(text):
     m = re.search(r"(?<![\w])([\d][\d \t\xa0.,]*)[ \t\xa0]*(?:€|euros?|eur)\b", text or "", re.I)
     if not m:
@@ -1988,6 +2003,14 @@ def get_listings(city, type_, max_price=None, min_price=None, min_surface=None, 
             sources.append(meta_import)
             SOURCE_LAST[src_name] = meta_import
 
+    # Une recherche par villes doit rester dans ces villes. Certaines sources
+    # (Citya notamment) ajoutent des biens d'autres communes sur la page.
+    if cities:
+        all_rows = [
+            r for r in all_rows
+            if not r.get("city") or city_matches(cities, r.get("city"))
+        ]
+
     merged = merge_listings(all_rows)
     unlocated_count = 0
     approx_count = 0
@@ -1995,11 +2018,12 @@ def get_listings(city, type_, max_price=None, min_price=None, min_surface=None, 
         merged, approx_count, unlocated_count = filter_polygon_rows(merged, polygon)
     for meta in sources:
         meta["merged_count"] = sum(1 for r in merged if r.get("source") == meta["name"])
-        if polygon:
-            meta["count"] = sum(
-                1 for r in merged
-                if meta["name"] in (r.get("sources") or [r.get("source")])
-            )
+        # Le count affiché doit refléter les annonces réellement conservées
+        # après fusion et après le filtre par villes / zone.
+        meta["count"] = sum(
+            1 for r in merged
+            if meta["name"] in (r.get("sources") or [r.get("source")])
+        )
     return merged, sources, unlocated_count, approx_count
 
 

@@ -2384,6 +2384,15 @@
     const hideDup = $('fHideDup').checked;
 
     let rows = currentListings.slice();
+    if (selectedCities.size) {
+      // Garde-fou : une source peut renvoyer des biens d'autres communes.
+      const wanted = [...selectedCities].map(normalizeWords);
+      rows = rows.filter((l) => {
+        if (!l.city) return false;
+        const key = normalizeWords(l.city);
+        return wanted.some((w) => key === w || key.startsWith(w + ' ') || key.endsWith(' ' + w));
+      });
+    }
     if (currentSource === '__imported__') {
       rows = rows.filter((l) => {
         const names = (l.sources && l.sources.length) ? l.sources : [l.source];
@@ -2566,7 +2575,10 @@
 
     const empty = document.getElementById('emptyState');
     if (!rows.length) {
-      $('results').innerHTML = `<div class="empty"><strong>Rien ne correspond encore.</strong>Élargis le budget, la surface ou décoche un filtre.</div>`;
+      const hint = selectedCities.size
+        ? `Aucune annonce dans ${selectedCities.size === 1 ? 'cette ville' : 'ces villes'}. Dessine une zone plus large ou ajoute des villes.`
+        : 'Élargis le budget, la surface ou décoche un filtre.';
+      $('results').innerHTML = `<div class="empty"><strong>Rien ne correspond encore.</strong>${hint}</div>`;
     }
     updateQuickChips();
   }
@@ -2770,11 +2782,15 @@
       lastSources = j.sources || [];
       lastCityCounts = j.city_counts || {};
       if (!currentListings.length) {
-        $('results').innerHTML = `<div class="empty"><strong>Aucun bien trouvé.</strong>Essaie une ville plus large, un autre type ou augmente le budget.</div>`;
-        $('resultsTitle').textContent = 'Aucun bien trouvé';
+        const zoneEmpty = selectedCities.size > 0;
+        const hint = zoneEmpty
+          ? `Aucune annonce dans ${selectedCities.size === 1 ? 'cette ville' : 'ces villes'}. Dessine une zone plus large ou ajoute des villes.`
+          : 'Essaie une ville plus large, un autre type ou augmente le budget.';
+        $('results').innerHTML = `<div class="empty"><strong>Aucun bien trouvé.</strong>${hint}</div>`;
+        $('resultsTitle').textContent = zoneEmpty ? 'Aucun bien dans la zone' : 'Aucun bien trouvé';
         $('resultsSubtitle').textContent = 'Les sources accessibles ont été interrogées.';
         $('sourceSummary').innerHTML = lastSources.map((s) => `<span class="total">${esc(s.name)} ${s.count}</span>`).join('');
-        setStatus('0 annonce. Élargis les critères.', 'error');
+        setStatus(zoneEmpty ? '0 annonce dans cette zone. Élargis la zone.' : '0 annonce. Élargis les critères.', 'error');
         return;
       }
       $('fMaxPrice').value = $('maxPrice').value || '';
